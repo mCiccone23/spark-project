@@ -34,6 +34,9 @@ task_distribution = (
            .reduceByKey(lambda a, b: a + b)
 )
 
+print("Jobs distribution: ", job_distribution.collect())
+print("Tasks distribution: ", task_distribution.collect())
+
 
 classes, counts = zip(*job_distribution.collect())
 plt.bar(classes, counts)
