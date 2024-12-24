@@ -26,25 +26,28 @@ dfFiltered = dfExtended.filter((col("_c2") == 1) & (col("next_event") == 0))
 # we compute the downtime
 dfDowntime = dfFiltered.withColumn("downtime", col("next_time") - col("_c0"))
 
-
+# we compute the downtime weighted on the CPU
 dfDowntime = dfDowntime.withColumn("capacity_lost", col("downtime") * col("_c4"))
 
 
+# we collect all the capacity lost
 total_lost_capacity = dfDowntime.agg(spark_sum("capacity_lost").alias("total_lost_capacity")).collect()[0][0]
 
+print("Total lost capacity: ", total_lost_capacity)
+
+# we compute the potential total available capacity
 total_available_capacity = wholeFile.withColumn("total_time", lead("_c0").over(window) - col("_c0")) \
                              .withColumn("capacity_time", col("total_time") * col("_c4")) \
                              .agg(spark_sum("capacity_time").alias("total_available_capacity")).collect()[0][0]
 
-
+print("Total available capacity: ", total_available_capacity)
 percentage_lost = (total_lost_capacity / total_available_capacity) * 100
 
-# Mostra il risultato
-print(f"Percentuale di capacità computazionale persa: {percentage_lost:.2f}%")
+# Show result
+print(f"Percentage of computation lost: {percentage_lost:.2f}%")
 
 
 # Close Spark session
-
 spark.stop()
 
 input("Press Enter ")
