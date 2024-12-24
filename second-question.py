@@ -14,13 +14,18 @@ wholeFile = spark.read.csv("part-00000-of-00001.csv.gz")
 
 #entries = wholeFile.map(lambda x: x.split(','))
 
+#window for order the data by timestamp for each machine id
 window = Window.partitionBy(wholeFile[1]).orderBy(wholeFile[0])
 
+# we add the column "next_time" and "next_event" to be able to do the analysis.
 dfExtended = wholeFile.withColumn("next_time", lead(wholeFile[0]).over(window)).withColumn("next_event", lead(wholeFile[2]).over(window))
 
+# we retain only the line with event type 1 and then next event 0
 dfFiltered = dfExtended.filter((col("_c2") == 1) & (col("next_event") == 0))
 
+# we compute the downtime
 dfDowntime = dfFiltered.withColumn("downtime", col("next_time") - col("_c0"))
+
 
 dfDowntime = dfDowntime.withColumn("capacity_lost", col("downtime") * col("_c4"))
 
