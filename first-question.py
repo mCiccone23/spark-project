@@ -1,6 +1,6 @@
 from pyspark import SparkContext
 import matplotlib.pyplot as plt
-
+import time
 
 sc = SparkContext("local[1]")
 sc.setLogLevel("ERROR")
@@ -12,8 +12,9 @@ entries = wholeFile.map(lambda x: x.split(',')) # entry splitù
 
 cpu_capacity_index = 4 # here we put the index of the capacity
 
+start = time.time()
 # we do a first map to take the distrinct machines
-distrinctEntries = entries.map(lambda x: (x[1], x[cpu_capacity_index])).distinct()
+distrinctEntries = entries.map(lambda x: (x[1], x[cpu_capacity_index])).distinct().cache()
 
 
 # map(capacity, 1) then we aggregate the number by key
@@ -21,8 +22,10 @@ cpu_distribution = (
     distrinctEntries.map(lambda x: (x[1], 1))
            .reduceByKey(lambda a, b: a + b)
            .collect()
+           
 )
 
+print("Execution time: ", time.time() - start )
 
 print("CPU Capacity:")
 for capacity, count in cpu_distribution:
@@ -45,7 +48,8 @@ plt.xticks(capacities)
 plt.show()
 # Close Spark session
 
+input("Press Enter ")
 sc.stop()
 
-input("Press Enter ")
+
 

@@ -22,11 +22,14 @@ tasksEntries = tasksFile.map(lambda x: x.split(','))
 # Reduce(a,b -> a+ b)
 #join(schedule class)
 
+#we count the number of jobs per schedule_class
 schedule_class = 5
 job_distribution = (
     jobsEntries.map(lambda x: (x[schedule_class], 1))
            .reduceByKey(lambda a, b: a + b)
 )
+
+#we count the number of tasks per schedule_class
 
 schedule_class = 7
 task_distribution = (
@@ -37,7 +40,7 @@ task_distribution = (
 print("Jobs distribution: ", job_distribution.collect())
 print("Tasks distribution: ", task_distribution.collect())
 
-
+#single plot of results
 classes, counts = zip(*job_distribution.collect())
 plt.bar(classes, counts)
 plt.xlabel("Scheduling Class")
@@ -60,17 +63,15 @@ sumRdd = joinedRdd.mapValues(lambda values: values[0] + values[1])
 print(sumRdd.collect())
 
 
-# Converti task_distribution in due liste per il grafico
+# Convert task_distribution in two list for the graph
 classes, counts = zip(*sumRdd.collect())
 
-# Crea un istogramma
+# Create un istogram
 plt.bar(classes, counts)
 plt.xlabel("Scheduling Class")
 plt.ylabel("Number of Jobs/Tasks")
 plt.title("Jobs/Tasks Distribution by Scheduling Class")
 plt.show()
-
-
 
 # Close Spark session
 

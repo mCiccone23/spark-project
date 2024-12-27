@@ -3,39 +3,87 @@ Alessandra Cicciarelli, Matteo Ciccone
 
 ## 1. Analyses conducted
 
-#### What is the distribution of the machines according to their CPU capacity?
-For the first question, we analyzed the machine_events file, specifically focusing on the CPU field, which represents the CPU capacity of the machine.
-To conduct this analysis, we first mapped each capacity to the value 1 and then summed the occurrences for each capacity. All the computation are done with RDD. Below are the results.
+### 1.1 What is the distribution of the machines according to their CPU capacity?
 
-##### CPU Capacity:
-CPU Capacity 0.5: 35015 machines\
-CPU Capacity 0.25: 510 machines\
-CPU Capacity 1: 2223 machines
+For this question, we analyzed the `machine_events` file, focusing on the **CPU** field, which represents the CPU capacity of each machine. 
 
-![distribution plot](./images/CPU%20distribution.png)
+#### Methodology:
+- Mapped each capacity value to `1` and summed the occurrences for each capacity using RDD transformations.
+- Computed the distribution of machines by CPU capacity.
 
-#### What is the percentage of computational power lost due to maintenance (a machine went offline and reconnected later)?
-For the second question, we used the same file, machine_events. Specifically, we analyzed cases where the event type = 1, indicating that the machine was removed from the cluster.
-First, we applied a window function to order the data by timestamp, partitioned by machine id.
-Next, we added two new columns to the DataFrame: the next timestamp and the next event type, allowing us to filter rows where an event type = 1 was followed by an event type = 0 (indicating downtime).
-By calculating the difference between these timestamps, we determined the downtime, which we then weighted by the CPU capacity.
-Finally, to compute the percentage relative to the total capacity, we divided the total lost capacity by the potential capacity. Below are the result.
+#### Results:
+| **CPU Capacity** | **Number of Machines** |
+|------------------|-------------------------|
+| 0.5              | 35,015                 |
+| 0.25             | 510                    |
+| 1                | 2,223                  |
 
-| Metric                      | Value                |
-|-----------------------------|----------------------|
-| **Total lost capacity**     | 65,292,876,776,135.75 |
-| **Total available capacity**| 3,517,654,828,229,501.5 |
-| **Percentage of computation lost** | 1.86%             |
+![CPU Distribution Plot](./images/CPU%20distribution.png)
 
+---
 
-#### What is the distribution of the number of jobs/tasks per scheduling class?
-#### Do tasks with a low scheduling class have a higher probability of being evicted?
-#### In general, do tasks from the same job run on the same machine?
-#### Are the tasks that request the more resources the one that consume the more resources?
-#### Can we observe correlations between peaks of high resource consumption on some machines and task eviction events?
+### 1.2 What is the percentage of computational power lost due to maintenance?
 
+For this question, we again used the `machine_events` file, analyzing cases where `event_type = 1` (indicating that a machine was removed from the cluster).
 
-### Fourth question:
+#### Methodology:
+1. **Data Preparation**:  
+   - Used a window function to order data by `timestamp`, partitioned by `machine_id`.
+   - Added two new columns to the DataFrame: the **next timestamp** and the **next event type**.
+2. **Downtime Calculation**:  
+   - Filtered rows where `event_type = 1` was followed by `event_type = 0` (indicating downtime).
+   - Computed downtime as the difference between these timestamps.
+   - Weighted downtime by CPU capacity.
+3. **Percentage Calculation**:  
+   - Divided the total lost computational power by the total available capacity to calculate the percentage of computational power lost.
+
+#### Results:
+| Metric                           | Value                      |
+|----------------------------------|----------------------------|
+| **Total Lost Capacity**          | 65,292,876,776,135.75      |
+| **Total Available Capacity**     | 3,517,654,828,229,501.5    |
+| **Percentage of Computation Lost** | 1.86%                     |
+
+---
+
+### 1.3 What is the distribution of the number of jobs/tasks per scheduling class?
+
+This question focuses on the `job_events` and `task_events` tables, specifically analyzing the **schedule_class** field.
+
+#### Methodology:
+1. **Data Loading**:  
+   - Read both `job_events` and `task_events` files.
+2. **Mapping and Aggregation**:  
+   - Mapped both datasets with `(schedule_class, 1)`.
+   - Aggregated values using `reduceByKey()`.
+3. **Analysis**:  
+   - Generated individual plots for jobs and tasks.
+   - Performed a `join()` operation to combine the analysis for jobs and tasks.
+   - Computed the sum of values.
+   - Created a final plot to display the distribution of tasks and jobs per class.
+
+#### Results:
+| Metric                | Distribution                                  |
+|-----------------------|-----------------------------------------------|
+| **Jobs Distribution** | ('3', 1,885), ('2', 3,030), ('1', 3,610), ('0', 2,179) |
+| **Tasks Distribution**| ('3', 56,586), ('2', 97,482), ('1', 58,109), ('0', 237,969) |
+| **Jobs/Tasks Combined**| ('3', 58,471), ('2', 100,512), ('1', 61,719), ('0', 240,148) |
+
+#### Visualizations:
+- **Jobs Distribution**  
+  ![Jobs Distribution](./images/jobs_distribution.png)  
+  *The most used class for jobs is **1**.*
+
+- **Tasks Distribution**  
+  ![Tasks Distribution](./images/tasks_distribution.png)  
+  *The most used class for tasks is **0**.*
+
+- **Jobs and Tasks Combined Distribution**  
+  ![Jobs and Tasks Distribution](./images/Jobs_tasks_distribution.png)  
+  *When combined, the most used class remains **0**.*
+---
+
+#### 1.4 Do tasks with a low scheduling class have a higher probability of being evicted?
 Do tasks with a low scheduling class have a higher probability of being evicted? 
 
     •  Map (scheduling_class, (event_type, 1))
@@ -45,8 +93,7 @@ Do tasks with a low scheduling class have a higher probability of being evicted?
     •  tasso di eviction
     •  grafici con tasso
     •  calcolo e stampa correlazione
-
-### Fifth question:
+#### 1.5 In general, do tasks from the same job run on the same machine?
 In general, do tasks from the same job run on the same machine?
 
     •  filter scheduling == 1 [SCHEDULED], map (job,machine)
@@ -55,6 +102,91 @@ In general, do tasks from the same job run on the same machine?
     •  conto i jobs totali
     •  rapporto
     •  stampo la distribuzione dei task dei jobs per il numero macchine
+#### 1.6 Are the tasks that request the more resources the one that consume the more resources?
+# Analysis of CPU and Memory Usage vs Requests
+
+To address this question, we analyzed the `task_usage` and `task_events` tables. The sequence of transformations and actions performed was as follows:
+
+1. **Mapping**: Extracted CPU and memory used/requested values, grouped by `jobid` and `task_index`.  
+   Format: `[(jobid, task), (CPU, MEM)]`
+2. **Aggregation**: Computed the average CPU and memory values using `reduceByKey()`.
+3. **Joining**: Combined the tables to associate CPU and memory usage/request data.
+4. **Cleaning and Formatting**: Processed the data to standardize and map it for analysis.
+5. **Correlation Analysis**: Calculated the correlation between requested and used resources.
+6. **Visualization**: Created scatter plots to visualize the relationship between resource requests and actual usage.
+
+## Results
+
+### Scatter Plots
+
+- **CPU Request vs CPU Used**  
+  ![Scatter Plot - CPU Request vs CPU Used](./images/Scatter_plot_CPU_Request_CPU_used.png)
+
+- **Memory Requested vs Memory Used**  
+  ![Scatter Plot - Memory Requested vs Memory Used](./images/Scatter_plot_memory_requested_memory_used.png)
+
+### Correlation Metrics
+
+| Metric                | Value                |
+|-----------------------|----------------------|
+| **CPU Correlation**   | 0.4469849108504573  |
+| **Memory Correlation**| 0.5678103841836577  |
+
+## Analysis
+
+From the scatter plots and the correlation values, we observe a moderate positive correlation between the requested and used resources for both CPU and memory. This indicates that while resource requests partially reflect actual usage, there is potential for optimization in resource allocation.
+
+#### 1.7 Can we observe correlations between peaks of high resource consumption on some machines and task eviction events?
 
 
 
+
+# 2. Performance Evaluation and improvements
+
+### 2.1 First analysis evaluation
+
+#### Studies at the application level:
+
+Trying to add caching on the most used RDD the result are the same this is due to the fact that few operation are executed on the RDD and the effect of caching are minimum.
+
+```python
+distrinctEntries = entries.map(lambda x: (x[1], x[cpu_capacity_index])).distinct().cache()
+
+start = time.time()
+# map(capacity, 1) then we aggregate the number by key
+cpu_distribution = (
+    distrinctEntries.map(lambda x: (x[1], 1))
+            .reduceByKey(lambda a, b: a + b)
+        .collect()
+)
+
+print("Execution time: ", time.time() - start)
+```
+#### RDD vs DataFrame
+
+##### **Execution Times**
+- **RDD Execution Time:** `2.11 seconds`
+- **DataFrame Execution Time:** `0.12 seconds`
+
+
+##### **RDD DAG**
+![RDDPipeline](./images/pipelineEs1.png)
+
+  - The DAG shows multiple stages with intermediate shuffles due to transformations like `distinct` and `reduceByKey`.
+
+##### **DataFrame DAG**
+![DataFrame Pipeline](./images/jobsEs1DataFrame.png)
+  - The DAG is simpler with fewer stages, as Spark optimized the entire query plan.
+
+##### **Conclusion**
+DataFrames demostrate better performance due to Spark's optimizations and they provide a more concise and declarative way for working with data.
+
+#### Other Improvements
+
+To further improve the performance of DataFrame operations, the following changes was implemented:
+
+   - Repartitioned the DataFrame based on the `cpu_capacity` column to reduce shuffle and optimize parallelism
+   - Filtered out null values from the `cpu_capacity` column early in the pipeline to avoid processing unnecessary data.
+   - Enabled Adaptive Query Execution (AQE) to allow Spark to dynamically optimize the query plan.
+   
+![stagesDataFrame1](./images/stagesDataFrame1.png)

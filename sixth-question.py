@@ -3,6 +3,7 @@ from pyspark import SparkContext
 import matplotlib.pyplot as plt
 import math
 
+# funtion for correlation with Pearson
 def compute_correlation(rdd):
     n = rdd.count()
     sum_x = rdd.map(lambda pair: pair[0]).sum()
@@ -31,12 +32,12 @@ tasksUsage = sc.textFile("./task_usage/part-00000-of-00500.csv.gz")
 tasksUsage = tasksUsage.map(lambda x: x.split(',')) #split to take separated fields
 
 #tasksEvents
-#map ((jobid, task index), (CPU, mem))
+#map ((jobid, task_index), (CPU, mem))
 tasksEventsMap = tasksEvents.map(lambda x: ((x[2], x[3]), (x[9], x[10]))).distinct()
 print(tasksEventsMap.takeOrdered(10))
 
 #tasksUsage
-#map ((jobid, task index), (CPU, mem))
+#map ((jobid, task_index), (CPU, mem))
 tasksUsageMap = tasksUsage.map(lambda x: ((x[2], x[3]), (x[5], x[6])))
 print(tasksUsageMap.takeOrdered(10))
 
