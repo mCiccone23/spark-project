@@ -103,8 +103,6 @@ In general, do tasks from the same job run on the same machine?
     •  rapporto
     •  stampo la distribuzione dei task dei jobs per il numero macchine
 #### 1.6 Are the tasks that request the more resources the one that consume the more resources?
-# Analysis of CPU and Memory Usage vs Requests
-
 To address this question, we analyzed the `task_usage` and `task_events` tables. The sequence of transformations and actions performed was as follows:
 
 1. **Mapping**: Extracted CPU and memory used/requested values, grouped by `jobid` and `task_index`.  
@@ -115,9 +113,9 @@ To address this question, we analyzed the `task_usage` and `task_events` tables.
 5. **Correlation Analysis**: Calculated the correlation between requested and used resources.
 6. **Visualization**: Created scatter plots to visualize the relationship between resource requests and actual usage.
 
-## Results
+##### Results
 
-### Scatter Plots
+##### Scatter Plots
 
 - **CPU Request vs CPU Used**  
   ![Scatter Plot - CPU Request vs CPU Used](./images/Scatter_plot_CPU_Request_CPU_used.png)
@@ -125,20 +123,18 @@ To address this question, we analyzed the `task_usage` and `task_events` tables.
 - **Memory Requested vs Memory Used**  
   ![Scatter Plot - Memory Requested vs Memory Used](./images/Scatter_plot_memory_requested_memory_used.png)
 
-### Correlation Metrics
+##### Correlation Metrics
 
 | Metric                | Value                |
 |-----------------------|----------------------|
 | **CPU Correlation**   | 0.4469849108504573  |
 | **Memory Correlation**| 0.5678103841836577  |
 
-## Analysis
+#### Analysis
 
 From the scatter plots and the correlation values, we observe a moderate positive correlation between the requested and used resources for both CPU and memory. This indicates that while resource requests partially reflect actual usage, there is potential for optimization in resource allocation.
 
 #### 1.7 Can we observe correlations between peaks of high resource consumption on some machines and task eviction events?
-
-
 
 
 # 2. Performance Evaluation and improvements
@@ -190,3 +186,4 @@ To further improve the performance of DataFrame operations, the following change
    - Enabled Adaptive Query Execution (AQE) to allow Spark to dynamically optimize the query plan.
    
 ![stagesDataFrame1](./images/stagesDataFrame1.png)
+

@@ -3,12 +3,9 @@ import matplotlib.pyplot as plt
 from pyspark.sql.functions import col, lag, lead, sum as spark_sum
 from pyspark.sql.window import Window
 
-# Programma principale
 spark = SparkSession.builder \
     .appName("Computational Power Lost") \
     .getOrCreate()
-
-
 
 wholeFile = spark.read.csv("part-00000-of-00001.csv.gz")
 
@@ -46,9 +43,6 @@ percentage_lost = (total_lost_capacity / total_available_capacity) * 100
 # Show result
 print(f"Percentage of computation lost: {percentage_lost:.2f}%")
 
-
+input("Press Enter ")
 # Close Spark session
 spark.stop()
-
-input("Press Enter ")
- 
