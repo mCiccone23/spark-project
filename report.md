@@ -83,18 +83,39 @@ This question focuses on the `job_events` and `task_events` tables, specifically
   *When combined, the most used class remains **0**.*
 ---
 
-#### 1.4 Do tasks with a low scheduling class have a higher probability of being evicted?
-Do tasks with a low scheduling class have a higher probability of being evicted? 
+### 1.4 Do tasks with a low scheduling class have a higher probability of being evicted?
 
-    •  Map (scheduling_class, (event_type, 1))
-    •  Totale eventi per scheduling class
-    •  Totale evicted (event_type == '2') per scheduling class 
-    •  combino i totali per scheduling class (schedule,    (total_per_class, total_evicted_per_class))
-    •  tasso di eviction
-    •  grafici con tasso
-    •  calcolo e stampa correlazione
+This question focuses on the `task events` table, in particular on the **schedule_class** and **event_type** fields.
+
+#### Methodology:
+1. **Data Loading**:
+  - Read the `task_event` file.
+2. **Mapping and Aggregation**:
+  - Mapped the entries with `(scheduling_class, (event_type, 1))` obtaining the `task_per_schedule` RDD.
+  - Aggregated values per scheduling_class using `reduceByKey()`.
+  - Filtered the `task_per_schedule` RDD to obtain an RDD with the evicted tasks.
+  - Aggregated values per per scheduling_class using `reduceByKey()` for the only evicted tasks.
+3. **Analysis**:
+  - Performed a `join()` for scheduling_class to combine the total events per class and the total evicted events per class.
+  - Computed the `eviction rate` per scheduling_class
+  - Plotted the comparison between `eviction rate` and  `scheduling class`
+  - Computed and printed the correlation between the `event type` and  the`scheduling class`
+
+#### Results:
+| Scheduling Class            | Eviction Rate                      |
+|----------------------------------|----------------------------|
+| **3**    |   0.04%  |
+| **2**    |   0.68%  |
+| **1**    |   1.36%  |
+| **0**    |   1.20%  |
+- **Eviction Rate for different Scheduling Class**  
+  ![Eviction Rate by scheduling_class](./images/eviction_rate_by_scheduling_class.png)  
+  *The most evicted tasks are that with lower scheduling class: 0 and 1*
+
+Another analysis done is the computation of the correlation between event_type and schedule_class: -0.19884144277296448. 
+
+---
 #### 1.5 In general, do tasks from the same job run on the same machine?
-In general, do tasks from the same job run on the same machine?
 
     •  filter scheduling == 1 [SCHEDULED], map (job,machine)
     •  raggruppo per job e conto il numero di machine diverse per job (diverse perchè sto usando un set)
@@ -135,6 +156,16 @@ To address this question, we analyzed the `task_usage` and `task_events` tables.
 From the scatter plots and the correlation values, we observe a moderate positive correlation between the requested and used resources for both CPU and memory. This indicates that while resource requests partially reflect actual usage, there is potential for optimization in resource allocation.
 
 #### 1.7 Can we observe correlations between peaks of high resource consumption on some machines and task eviction events?
+    • Filtra task evicted e mappa in (machine_id, time)
+    • Mappa resource usage in (machine_id, (start_time, end_time, (max_mem, max_cpu, max_disc))) --> usato safe_float per rimuovere valori nulli
+    • join su machine_id
+    • Filtro su time compreso tra start_time e end_time
+    • Mappa per ciascuna risorsa (max_mem, max_cpu, max_disc)
+    • Aggrega per ciascuna risorsa e calcola la correlazione per ciascuna risorsa
+    • stampa e visualizzazione dei risultati
+Computazione lenta in questo modo --> ottimizzare 
+
+
 
 
 # 2. Performance Evaluation and improvements
