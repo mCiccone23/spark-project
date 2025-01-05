@@ -187,3 +187,53 @@ To further improve the performance of DataFrame operations, the following change
    
 ![stagesDataFrame1](./images/stagesDataFrame1.png)
 
+# Working in the Cloud  
+## Deploying in the Cloud  
+
+### 1. Project Initialization  
+- We started by ensuring the necessary project setup on Google Cloud Platform (GCP).  
+- The project used: **spark-project-446016**.  
+
+### 2. Cluster Creation  
+- We created a Dataproc cluster named **spark-cluster** to perform distributed PySpark analyses.  
+- The cluster was configured with the following parameters:  
+  - **Region**: `europe-west1`  
+  - **Zone**: `europe-west1-b`  
+  - **Master Node**: `n1-standard-4` machine type, 100GB boot disk.  
+  - **Worker Nodes**: 2 worker nodes, each `n1-standard-4`, with 100GB boot disks.  
+  - **Image Version**: `2.0-debian10`.  
+- Command used:  
+  ```bash  
+  gcloud dataproc clusters create spark-cluster \  
+      --region=europe-west1 \  
+      --zone=europe-west1-b \  
+      --master-machine-type=n1-standard-4 \  
+      --master-boot-disk-size=100GB \  
+      --num-workers=2 \  
+      --worker-machine-type=n1-standard-4 \  
+      --worker-boot-disk-size=100GB \  
+      --image-version=2.0-debian10 \  
+      --project=spark-project-446016  
+  ```
+
+### 3. Bucket Creation  
+- To store scripts and datasets, we created a Google Cloud Storage bucket.  
+- The bucket was created in the same region (`europe-west1`) to optimize latency and cost.  
+- Command used:  
+  ```bash  
+  gcloud storage buckets create gs://spark-project-ciccone --location=europe-west1  
+  ```  
+- The bucket creation was verified using:  
+  ```bash  
+  gcloud storage buckets list  
+  ```  
+
+### 4. Upload script
+To execute the script for the analysis we had to upload it in the bucket:
+```bash
+gsutil cp example.py gs://spark-project-ciccone/
+```
+
+### 5. Run script on the Cluster
+
+
