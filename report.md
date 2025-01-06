@@ -115,14 +115,28 @@ This question focuses on the `task events` table, in particular on the **schedul
 Another analysis done is the computation of the correlation between event_type and schedule_class: -0.19884144277296448. 
 
 ---
-#### 1.5 In general, do tasks from the same job run on the same machine?
+### 1.5 In general, do tasks from the same job run on the same machine?
 
-    •  filter scheduling == 1 [SCHEDULED], map (job,machine)
-    •  raggruppo per job e conto il numero di machine diverse per job (diverse perchè sto usando un set)
-    •  conto quanti jobs sono runnati su una sola macchina
-    •  conto i jobs totali
-    •  rapporto
-    •  stampo la distribuzione dei task dei jobs per il numero macchine
+This question focuses on the `task events` table, in particular on the **job_id** and **machine_id** fields.
+
+#### Methodology:
+1. **Data Loading**:
+  - Read the `task_event` file.
+2. **Mapping and Aggregation**:
+  - Filtered the entries to select the only tasks `SCHEDULED`,and mapped the entries with `(job_id, machine_id)` obtaining the `job_machine_pairs` RDD.
+  - Grouped the RDD by the job ID, so that each key (job_id) will be associated with an iterable of all its corresponding  machine IDs. For each key-value pair produced by `groupByKey()`, we use the `mapValues()` transformation combined with the  `len(set(m))` which calculates the number of unique machine IDs (they are unique because we're using the `set(m)`). The RDD obtained is the `machines_per_job` RDD.
+  - Counted the jobs which were runned on only one machine and then the total number of job in the `machines_per_job` RDD.
+
+3. **Analysis**:
+  - Computed the percentage of task from the same job runned on one machine.
+  - Plotted the graph `Sample of Task Distribution by Machine` to show how the number of machines used varies across different jobs.
+#### Results:
+Percentage of task from the same job running on the same machine: `41.69%`  
+
+#### Task from the same job distribution by machine
+![Sample of Task Distribution by Machine](./images/task_distribution_by_machine.png)
+*The majority of tasks from the same job have been runned on one machine*
+
 #### 1.6 Are the tasks that request the more resources the one that consume the more resources?
 To address this question, we analyzed the `task_usage` and `task_events` tables. The sequence of transformations and actions performed was as follows:
 
