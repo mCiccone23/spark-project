@@ -122,7 +122,7 @@ This question focuses on the `task events` table, in particular on the **job_id*
 #### Methodology:
 1. **Data Loading**:
   - Read the `task_event` file.
-2. **Mapping and Aggregation**:
+2. **Mapping, Transformation and Aggregation**:
   - Filtered the entries to select the only tasks `SCHEDULED`,and mapped the entries with `(job_id, machine_id)` obtaining the `job_machine_pairs` RDD.
   - Grouped the RDD by the job ID, so that each key (job_id) will be associated with an iterable of all its corresponding  machine IDs. For each key-value pair produced by `groupByKey()`, we use the `mapValues()` transformation combined with the  `len(set(m))` which calculates the number of unique machine IDs (they are unique because we're using the `set(m)`). The RDD obtained is the `machines_per_job` RDD.
   - Counted the jobs which were runned on only one machine and then the total number of job in the `machines_per_job` RDD.
@@ -136,6 +136,8 @@ Percentage of task from the same job running on the same machine: `41.69%`
 #### Task from the same job distribution by machine
 ![Sample of Task Distribution by Machine](./images/task_distribution_by_machine.png)
 *The majority of tasks from the same job have been runned on one machine*
+
+---
 
 #### 1.6 Are the tasks that request the more resources the one that consume the more resources?
 To address this question, we analyzed the `task_usage` and `task_events` tables. The sequence of transformations and actions performed was as follows:
@@ -170,17 +172,48 @@ To address this question, we analyzed the `task_usage` and `task_events` tables.
 From the scatter plots and the correlation values, we observe a moderate positive correlation between the requested and used resources for both CPU and memory. This indicates that while resource requests partially reflect actual usage, there is potential for optimization in resource allocation.
 
 #### 1.7 Can we observe correlations between peaks of high resource consumption on some machines and task eviction events?
-    • Filtra task evicted e mappa in (machine_id, time)
-    • Mappa resource usage in (machine_id, (start_time, end_time, (max_mem, max_cpu, max_disc))) --> usato safe_float per rimuovere valori nulli
-    • join su machine_id
-    • Filtro su time compreso tra start_time e end_time
-    • Mappa per ciascuna risorsa (max_mem, max_cpu, max_disc)
-    • Aggrega per ciascuna risorsa e calcola la correlazione per ciascuna risorsa
-    • stampa e visualizzazione dei risultati
-Computazione lenta in questo modo --> ottimizzare 
+This question focuses on two datasets : `task_events`and `task_usage` on this relevant fields:
+  - From task_events: event_type (to filter evictions), machine_id, and time.
+  - From task_usage: machine_id, start_time, end_time, and resource metrics (max_mem, max_cpu, max_disc).
+### Methodology
+1. **Data Loading:**
+  - Read the `task_event` and  `task_usage` files.
+2. **Mapping, Transformation and Aggregation:**
+  - *Task Event*: Filtered `task_events` to include only tasks evicted. Then mapped the filtered data to create an RDD of `(machine_id, time)` pairs.
 
+  - *Resource Usage*: Mapped `task_usage` into an RDD of `(machine_id, (start_time, end_time, (max_mem, max_cpu, max_disc)))`, where each record represents the time window and peak resource usage for a task on a machine.
 
+  - Joined the eviction RDD and the resource usage RDD using `machine_id`.
 
+  - Filtered the joined data to retain only records where the eviction time is between the resource usage time window `(start_time ≤ time ≤ end_time)`.
+
+  - Extracted resource usage values `(memory, CPU, and disk)` at the time of eviction and mapped them for aggregation.
+  - Created separate RDDs for memory, CPU, and disk usage, aggregating the number of evictions for each unique resource usage level.
+3. **Analysis:**
+  - Computed the correlation between resource usage peaks and the number of evictions for each resource type 
+  - Created plots for memory, CPU, and disk usage, showing the number of evictions corresponding to different levels of resource usage peaks.
+
+### Result 
+
+#### Correlation between resources and eviction events
+
+| Resource                | Value                |
+|-----------------------|----------------------|
+| **Max memory**   | -0.01  |
+| **Max CPU**| -0.03  |
+| **Max Disk**| -0.07  |
+
+These low and slightly negative correlation values indicate that there is no significant relationship between resource consumption peaks and task eviction events. In fact, resource usage seems to have minimal or no impact on the likelihood of evictions.
+
+#### Graphs
+  - **Correlation between Memory Peaks and Evictions**
+  ![Memory Peaks and Evictions](./images/correlation_Memory_eviction.png)
+  - **Correlation between CPU Peaks and Evictions**
+  ![CPU Peaks and Evictions](./images/correlation_CPU_eviction.png)
+  - **Correlation between Disk Peaks and Evictions**
+  ![Disk Peaks and Evictions](images/correlation_disk_eviction.png)
+
+The analysis finds no substantial evidence linking peaks in resource usage to task evictions, suggesting other factors play a more critical role in determining eviction events in this distributed system.
 
 # 2. Performance Evaluation and improvements
 
