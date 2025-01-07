@@ -218,6 +218,9 @@ To further improve the performance of DataFrame operations, the following change
    
 ![stagesDataFrame1](./images/stagesDataFrame1.png)
 
+### 2.2 Second analysis evaluation
+
+
 # Working in the Cloud  
 ## Deploying in the Cloud  
 

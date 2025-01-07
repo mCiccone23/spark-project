@@ -2,6 +2,7 @@ from pyspark.sql import SparkSession
 import matplotlib.pyplot as plt
 from pyspark.sql.functions import col, lag, lead, sum as spark_sum
 from pyspark.sql.window import Window
+import time
 
 spark = SparkSession.builder \
     .appName("Computational Power Lost") \
@@ -13,7 +14,7 @@ wholeFile = spark.read.csv("part-00000-of-00001.csv.gz")
 
 #window for order the data by timestamp for each machine id
 window = Window.partitionBy(wholeFile[1]).orderBy(wholeFile[0])
-
+start = time.time()
 # we add the column "next_time" and "next_event" to be able to do the analysis.
 dfExtended = wholeFile.withColumn("next_time", lead(wholeFile[0]).over(window)).withColumn("next_event", lead(wholeFile[2]).over(window))
 
@@ -26,6 +27,7 @@ dfDowntime = dfFiltered.withColumn("downtime", col("next_time") - col("_c0"))
 # we compute the downtime weighted on the CPU
 dfDowntime = dfDowntime.withColumn("capacity_lost", col("downtime") * col("_c4"))
 
+print("Execution time: ", time.time() - start )
 
 # we collect all the capacity lost
 total_lost_capacity = dfDowntime.agg(spark_sum("capacity_lost").alias("total_lost_capacity")).collect()[0][0]
