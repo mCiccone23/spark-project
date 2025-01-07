@@ -2,6 +2,7 @@ from pyspark import SparkContext
 
 import matplotlib.pyplot as plt
 import math
+import time
 
 # funtion for correlation with Pearson
 def compute_correlation(rdd):
@@ -21,6 +22,8 @@ def compute_correlation(rdd):
 sc = SparkContext("local[1]")
 sc.setLogLevel("ERROR")
 
+
+start_time = time.time()
 
 
 tasksEvents = sc.textFile("./task_events/part-00000-of-00500.csv.gz") 
@@ -69,6 +72,8 @@ memory_rdd = formattedStat.map(lambda x: (x[3], x[4]))
 #computation of correlation with the function definied at the beginning
 cpu_corr = compute_correlation(cpu_rdd)
 memory_corr = compute_correlation(memory_rdd)
+print(f"Total Execution Time: {time.time() - start_time:.2f} seconds")
+
 
 print("CPU correlation: ", cpu_corr)
 print("Memory correlation: ", memory_corr)
@@ -101,10 +106,10 @@ plt.title("Scatter Plot: Memory Requested vs Memory Used")
 plt.grid(True)
 plt.show()
 
+input("Press Enter ")
 
 # Close Spark session
 
 sc.stop()
 
-input("Press Enter ")
  
