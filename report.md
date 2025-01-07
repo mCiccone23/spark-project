@@ -264,6 +264,28 @@ To further improve the performance of DataFrame operations, the following change
    - Enabled Adaptive Query Execution (AQE) to allow Spark to dynamically optimize the query plan.
    
 ![stagesDataFrame1](./images/stagesDataFrame1.png)
+### 2.4 Analysis performance for the fourth question
+#### Studies at the application level: 
+Trying to add caching on the most used RDD `task_per_schedule` the result are the same or even worst, this is due to the fact that few operation are executed on the RDD, so for this analysis the caching is not useful.
+
+Another optimization tried is to avoid the join between the two RDD: `total_per_class` and `total_evicted_per_class`, mapping  each entry in the `task_per_schedule` RDD to `(scheduling_class, (total_count, evicted_count))`. In this way the join is useless and it is possible to have an improvement of the performance.
+
+```python
+task_counts = task_per_schedule.map(lambda x: (
+    x[0],  # scheduling_class as the key
+    (1, 1 if x[1][0] == '2' else 0)  # (total_count, evicted_count)
+))
+
+# Reduce by key to sum up total and evicted counts
+combined_counts = task_counts.reduceByKey(lambda a, b: (
+    a[0] + b[0],  # Sum of total counts
+    a[1] + b[1]   # Sum of evicted counts
+))
+
+# Calculate eviction rate
+eviction_rate_per_class = combined_counts.mapValues(lambda x: x[1] / x[0])
+
+```
 
 # Working in the Cloud  
 ## Deploying in the Cloud  

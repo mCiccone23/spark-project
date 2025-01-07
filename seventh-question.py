@@ -8,17 +8,34 @@ import matplotlib.pyplot as plt
 import math
 
 def compute_correlation(rdd):
-    n = rdd.count()
-    sum_x = rdd.map(lambda pair: pair[0]).sum()
-    sum_y = rdd.map(lambda pair: pair[1]).sum()
-    sum_xy = rdd.map(lambda pair: pair[0] * pair[1]).sum()
-    sum_x2 = rdd.map(lambda pair: pair[0] ** 2).sum()
-    sum_y2 = rdd.map(lambda pair: pair[1] ** 2).sum()
+    # Map to compute partial sums for all required statistics
+    stats = rdd.map(lambda pair: (
+        1,                 # Count
+        pair[0],           # Sum of x
+        pair[1],           # Sum of y
+        pair[0] * pair[1], # Sum of x * y
+        pair[0] ** 2,      # Sum of x^2
+        pair[1] ** 2       # Sum of y^2
+    )).reduce(lambda a, b: (
+        a[0] + b[0],  # Total count
+        a[1] + b[1],  # Total sum_x
+        a[2] + b[2],  # Total sum_y
+        a[3] + b[3],  # Total sum_xy
+        a[4] + b[4],  # Total sum_x2
+        a[5] + b[5]   # Total sum_y2
+    ))
 
+    n, sum_x, sum_y, sum_xy, sum_x2, sum_y2 = stats
+
+    # Compute correlation
     numerator = n * sum_xy - sum_x * sum_y
     denominator = math.sqrt((n * sum_x2 - sum_x ** 2) * (n * sum_y2 - sum_y ** 2))
 
+    if denominator == 0:
+        return 0  # Handle divide-by-zero case
+
     return numerator / denominator
+
 def safe_float(value):
     return float(value.strip()) if value.strip() != '' else 0.0
 
