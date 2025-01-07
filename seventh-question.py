@@ -107,17 +107,4 @@ plt.title("Correlation between Disk Peaks and Evictions")
 plt.show()
 
 
-### Seventh question:
-#Can we observe correlations between peaks of high resource consumption on some machines and task eviction events?
-
- #   • Filtra task evicted e mappa in (machine_id, time)
-  #  • Mappa resource usage in (machine_id, (start_time, end_time, (max_mem, max_cpu, max_disc))) --> usato safe_float per rimuovere valori nulli
-  #  • join su machine_id
-  #  • Filtro su time compreso tra start_time e end_time
-  #  • Mappa per ciascuna risorsa (max_mem, max_cpu, max_disc)
-  # • Aggrega per ciascuna risorsa e calcola la correlazione per ciascuna risorsa
-
-   #• stampa e visualizzazione dei risultati
-#Computazione lenta in questo modo --> ottimizzare 
-
 
