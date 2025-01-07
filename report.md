@@ -243,12 +243,12 @@ print("Execution time: ", time.time() - start)
 - **DataFrame Execution Time:** `0.12 seconds`
 
 
-##### **RDD DAG**
+##### **RDD Stages**
 ![RDDPipeline](./images/pipelineEs1.png)
 
   - The DAG shows multiple stages with intermediate shuffles due to transformations like `distinct` and `reduceByKey`.
 
-##### **DataFrame DAG**
+##### **DataFrame Stages**
 ![DataFrame Pipeline](./images/jobsEs1DataFrame.png)
   - The DAG is simpler with fewer stages, as Spark optimized the entire query plan.
 
@@ -264,28 +264,126 @@ To further improve the performance of DataFrame operations, the following change
    - Enabled Adaptive Query Execution (AQE) to allow Spark to dynamically optimize the query plan.
    
 ![stagesDataFrame1](./images/stagesDataFrame1.png)
-### 2.4 Analysis performance for the fourth question
-#### Studies at the application level: 
-Trying to add caching on the most used RDD `task_per_schedule` the result are the same or even worst, this is due to the fact that few operation are executed on the RDD, so for this analysis the caching is not useful.
+### **2.2 Second Analysis Evaluation**
 
-Another optimization tried is to avoid the join between the two RDD: `total_per_class` and `total_evicted_per_class`, mapping  each entry in the `task_per_schedule` RDD to `(scheduling_class, (total_count, evicted_count))`. In this way the join is useless and it is possible to have an improvement of the performance.
+#### **RDD vs DataFrame**
+As observed in the first analysis, DataFrames outperformed RDDs in terms of execution times and stage efficiency.
 
-```python
-task_counts = task_per_schedule.map(lambda x: (
-    x[0],  # scheduling_class as the key
-    (1, 1 if x[1][0] == '2' else 0)  # (total_count, evicted_count)
-))
+---
 
-# Reduce by key to sum up total and evicted counts
-combined_counts = task_counts.reduceByKey(lambda a, b: (
-    a[0] + b[0],  # Sum of total counts
-    a[1] + b[1]   # Sum of evicted counts
-))
+### **Performance Comparison**
 
-# Calculate eviction rate
-eviction_rate_per_class = combined_counts.mapValues(lambda x: x[1] / x[0])
+#### **Execution Times**
+- **RDD Execution Time:** `1.98 seconds`
+- **DataFrame Execution Time:** `0.17 seconds`
 
-```
+---
+
+### **RDD Stages**
+![secondRDDStages](./images/second_RDD_stages.png)
+  - The RDD implementation required **3 stages**.
+  - Shuffle Read/Write sizes were consistent across stages but relatively higher (**666.2 KiB**).
+  - Stage durations were longer, especially for stages involving `groupByKey` and subsequent reductions.
+
+---
+
+### **DataFrame Stages**
+![secondDataframeStages](./images/second_dataframe_stages.png)
+  - The DataFrame implementation required **7 completed stages**, with **6 skipped stages**, showcasing Spark's optimization capabilities (e.g., Catalyst optimizer).
+  - The longest stages include Stage ID 6 and 9, lasting 0.4 seconds and 0.2 seconds, respectively.
+  - Shuffle Read/Write sizes were significantly reduced (**e.g., 664.5 KiB**).
+  - The use of Catalyst and Tungsten optimizations streamlined the overall execution, leading to shorter stage durations.
+
+---
+
+### **Conclusion**
+1. **Execution Speed:**
+   - DataFrames provided a **faster execution** compared to RDDs, largely due to better optimizations and reduced shuffle overhead.
+   
+2. **Shuffle Management:**
+   - The DataFrame implementation demonstrated **lower shuffle read/write sizes**, making it more efficient for large-scale data operations.
+
+3. **Stage Optimization:**
+   - The DataFrame pipeline skipped unnecessary stages, further improving performance.
+
+### **2.3 Third Analysis Evaluation**
+
+#### Execution Time
+- **RDD Execution Time:** `3.92 seconds`
+- **DataFrame Execution Time:** `0.44 seconds`
+
+### RDD Stages
+
+
+### **DataFrame Stages**
+![DataFrame Stages](./images/third_dataframe_stages.png)
+
+- **Completed Stages:** 24  
+- **Skipped Stages:** 14  
+- **Execution Time:**  
+  - Most stages executed in milliseconds (e.g., 0.01–0.1 seconds).
+- **Shuffle Read/Write:**  
+  - Shuffle Read and Write values are minimal (e.g., `248.0 B`).
+
+- The high number of completed stages indicates significant fragmentation of tasks.
+- The **Catalyst optimizer** and **Adaptive Query Execution (AQE)** reduce redundant computations, evidenced by the 14 skipped stages.
+- However, the large number of stages introduces overhead in managing and coordinating these smaller tasks.
+- Repeated `toPandas` conversions dominate many stages, which likely adds significant overhead when working with distributed datasets.
+
+---
+
+### **RDD Stages**
+![RDD Stages](./images/third_RDD_stages.png)
+
+- **Completed Stages:** 8  
+- **Skipped Stages:** 6  
+- **Execution Time:**  
+  - Execution times are longer per stage, with some stages taking up to 0.8 seconds.
+- **Shuffle Read/Write:**  
+  - **Shuffle Read:** Up to `734.9 KiB`.  
+  - **Shuffle Write:** Up to `102.0 B`.  
+
+
+- RDDs have significantly fewer stages, meaning less task fragmentation and coordination overhead.
+- Higher shuffle operations compared to DataFrames are a notable drawback, but they are balanced by fewer overall stages.
+- Stages take longer to complete compared to individual DataFrame stages, but the reduced number of stages compensates for this.
+
+---
+
+### **2.6 Sixth Analysis Evaluation**
+
+
+#### **Execution Time**
+
+- **RDD Execution Time:** 35.48 seconds
+- **DataFrame Execution Time:** 20.22 seconds
+
+#### **RDD Stages**
+
+![RDD Stages](./images/sixth_RDD_stages.png)
+
+- **Completed Stages:** 8  
+- **Skipped Stages:** 6  
+- **Execution Time:**  
+  - Execution times are longer per stage, with some stages taking up to 0.8 seconds.
+- **Shuffle Read/Write:**  
+  - **Shuffle Read:** Up to `734.9 KiB`.  
+  - **Shuffle Write:** Up to `102.0 B`.  
+
+#### **DataFrame Stages**
+
+![DataFrame Stages](./images/sixth_dataframe_stages.png)
+
+- **Completed Stages:** 18  
+- **Skipped Stages:** 14  
+- **Execution Time:**  
+  - Most stages executed in milliseconds (e.g., 0.01–0.1 seconds).
+- **Shuffle Read/Write:**  
+  - Shuffle Read and Write values are minimal (e.g., `248.0 B`).
+
+#### **Conclusion**
+In summary, DataFrames are better suited for this type of analysis, offering faster execution and more efficient handling of resource allocation data.
+
 
 # Working in the Cloud  
 ## Deploying in the Cloud  
