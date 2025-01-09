@@ -6,6 +6,7 @@ from pyspark import SparkContext
 
 import matplotlib.pyplot as plt
 import math
+import time as t
 
 def compute_correlation(rdd):
     # Map to compute partial sums for all required statistics
@@ -66,14 +67,17 @@ max_mem = 10
 max_cpu = 13
 max_disc = 14
 
+start = t.time()
+
 # 1. Filtra task evicted e mappa in (machine_id, time)
 evicted_tasks = tasksEvents.filter(lambda x: x[event_type] == '2') \
                            .map(lambda x: (x[machine_id], int(x[time])))
 
+
 # 2. Mappa resource usage in (machine_id, (start_time, end_time, (max_mem, max_cpu, max_disc)))
-resource_usage = tasksUsage.map(lambda x: (x[machine_id], 
+resource_usage = tasksUsage.filter(lambda x: x[max_mem].strip() != '' and x[max_cpu].strip() != '' and x[max_disc].strip() != '').map(lambda x: (x[machine_id], 
                                            (int(x[start_time]), int(x[end_time]), 
-                                            (safe_float(x[max_mem]), safe_float(x[max_cpu]), safe_float(x[max_disc])))))
+                                            (float(x[max_mem]), float(x[max_cpu]), float(x[max_disc])))))
 
 # 3. Join su machine_id
 joined_data = evicted_tasks.join(resource_usage)
@@ -89,14 +93,19 @@ evictions_by_mem = resources_evictions.map(lambda x: (x[0][0], 1)).reduceByKey(l
 evictions_by_cpu = resources_evictions.map(lambda x: (x[0][1], 1)).reduceByKey(lambda a, b: a + b)  # max_cpu
 evictions_by_disc = resources_evictions.map(lambda x: (x[0][2], 1)).reduceByKey(lambda a, b: a + b)  # max_disc
 
-# 7. Calcola la correlazione per ciascuna risorsa
+# 7. Calcola la correlazione tra numero di eviction e max per ciascuna risorsa
 correlation_mem = compute_correlation(evictions_by_mem.map(lambda x: (x[0], x[1])))
 correlation_cpu = compute_correlation(evictions_by_cpu.map(lambda x: (x[0], x[1])))
 correlation_disc = compute_correlation(evictions_by_disc.map(lambda x: (x[0], x[1])))
 
-print(f"Correlation between max memory and eviction events: {correlation_mem:.2f}")
-print(f"Correlation between max CPU and eviction events: {correlation_cpu:.2f}")
-print(f"Correlation between max disk and eviction events: {correlation_disc:.2f}")
+end = t.time() - start 
+
+print("Execution time: ", end)
+
+
+print(f"Correlation between max memory and eviction events: {correlation_mem}")
+print(f"Correlation between max CPU and eviction events: {correlation_cpu}")
+print(f"Correlation between max disk and eviction events: {correlation_disc}")
 
 # 8. Visualizzazione dei risultati
 # Per memoria

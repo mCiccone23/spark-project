@@ -199,9 +199,9 @@ This question focuses on two datasets : `task_events`and `task_usage` on this re
 
 | Resource                | Value                |
 |-----------------------|----------------------|
-| **Max memory**   | -0.01  |
-| **Max CPU**| -0.03  |
-| **Max Disk**| -0.07  |
+| **Max memory**   | -0.011891225790017083 |
+| **Max CPU**| -0.044924205842651846 |
+| **Max Disk**| -0.07870760036834348  |
 
 These low and slightly negative correlation values indicate that there is no significant relationship between resource consumption peaks and task eviction events. In fact, resource usage seems to have minimal or no impact on the likelihood of evictions.
 
@@ -351,7 +351,7 @@ As observed in the first analysis, DataFrames outperformed RDDs in terms of exec
 ---
 ### 2.4 Analysis performance for the fourth question
 #### Studies at the application level: 
-Trying to add caching on the most used RDD `task_per_schedule` the result are the same or even worst, this is due to the fact that few operation are executed on the RDD, so for this analysis the caching is not useful.
+Trying to add caching on the most used RDD `task_per_schedule` the results are the same or even worst, this is due to the fact that few operations are executed on the RDD, so for this analysis the caching is not useful.
 
 Another optimization tried is to avoid the join between the two RDD: `total_per_class` and `total_evicted_per_class`, mapping  each entry in the `task_per_schedule` RDD to `(scheduling_class, (total_count, evicted_count))`. In this way the join is useless and it is possible to have an improvement of the performance.
 
@@ -371,6 +371,31 @@ combined_counts = task_counts.reduceByKey(lambda a, b: (
 eviction_rate_per_class = combined_counts.mapValues(lambda x: x[1] / x[0])
 
 ```
+- **Execution time with join:**  6.068982839584351 s
+- **Execution time without join:**  5.5010459423065186 s
+
+### RDD vs Dataframe
+
+- **Execution time with RDD:**  5.834218978881836 s 
+- **Execution time with dataframe:**  4.376155138015747 s
+It is evident that using dataframe the performance are better than using RDD.
+
+#### RDD Stages
+![RDD stages](images/fourth-RDD-stages.png)
+#### Dataframe Stages
+![dataframe stages](images/fourth-dataframe-stages.png)
+
+---
+### **2.5 Fifth Analysis Evaluation**
+#### Studies at the application level:
+Trying to add caching on the most used RDD `machines_per_jon` the results are slightly better, but still is not possible to see a big improvement, because the RDD is used few times. After the analysis with caching these are the results obtained on the execution time:
+- Execution time before optimization: 3.0019748210906982 s
+- Execution time with caching: 2.735642671585083 s
+
+### RDD vs Dataframe
+#### RDD Stages
+![RDD stages](images/fifth-RDD-stages.png)
+#### Dataframe Stages
 
 ### **2.6 Sixth Analysis Evaluation**
 
@@ -402,9 +427,18 @@ eviction_rate_per_class = combined_counts.mapValues(lambda x: x[1] / x[0])
   - Most stages executed in milliseconds (e.g., 0.01–0.1 seconds).
 - **Shuffle Read/Write:**  
   - Shuffle Read and Write values are minimal (e.g., `248.0 B`).
-
 #### **Conclusion**
 In summary, DataFrames are better suited for this type of analysis, offering faster execution and more efficient handling of resource allocation data.
+---
+
+### **2.7 Seventh Analysis Evaluation**
+#### Execution Time
+- Execution time without optimization: 32.08906149864197 
+
+#### RDD Stages
+![RDD stages](images/seventh-RDD-stages.png)
+
+---
 
 
 # Working in the Cloud  
