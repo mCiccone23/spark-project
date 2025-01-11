@@ -9,8 +9,8 @@ spark = SparkSession.builder \
 
 start_time = time.time()
 
-jobsFile = spark.read.csv("./job_events/part-00000-of-00500.csv.gz", header=False, inferSchema=True)
-tasksFile = spark.read.csv("./task_events/part-00000-of-00500.csv.gz", header=False, inferSchema=True)
+jobsFile = spark.read.csv("../job_events/part-00000-of-00500.csv.gz", header=False, inferSchema=True)
+tasksFile = spark.read.csv("../task_events/part-00000-of-00500.csv.gz", header=False, inferSchema=True)
 
 # we count the number of jobs per schedule_class
 job_distribution = (

@@ -12,7 +12,7 @@ spark = SparkSession.builder \
     .getOrCreate()
 
 # Load data
-tasks_df = spark.read.csv("./task_events/part-00000-of-00500.csv.gz", header=False, inferSchema=True)
+tasks_df = spark.read.csv("../task_events/part-00000-of-00500.csv.gz", header=False, inferSchema=True)
 
 # Define columns for analysis
 event_type = "_c5"  # Column 5

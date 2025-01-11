@@ -11,7 +11,7 @@ start_time = time.time()
 
 # Load the task events data
 # Selecting relevant columns: job_id, task_index, cpu_required, memory_required
-tasksEvents = spark.read.csv("./task_events/part-00000-of-00500.csv.gz", header=False, inferSchema=True)
+tasksEvents = spark.read.csv("../task_events/part-00000-of-00500.csv.gz", header=False, inferSchema=True)
 tasksEventsDF = tasksEvents.select(
     col("_c2").alias("job_id"),
     col("_c3").alias("task_index"),
@@ -21,7 +21,7 @@ tasksEventsDF = tasksEvents.select(
 
 # Load the task usage data
 # Selecting relevant columns: job_id, task_index, cpu_used, memory_used, and calculating averages
-tasksUsage = spark.read.csv("./task_usage/part-00000-of-00500.csv.gz", header=False, inferSchema=True)
+tasksUsage = spark.read.csv("../task_usage/part-00000-of-00500.csv.gz", header=False, inferSchema=True)
 tasksUsageDF = tasksUsage.select(
     col("_c2").alias("job_id"),
     col("_c3").alias("task_index"),

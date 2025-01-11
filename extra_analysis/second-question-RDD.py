@@ -4,7 +4,7 @@ import time
 sc = SparkContext("local[1]", "Computational Power Lost")
 sc.setLogLevel("ERROR")
 
-wholeFile = sc.textFile("part-00000-of-00001.csv.gz")
+wholeFile = sc.textFile("../part-00000-of-00001.csv.gz")
 entries = wholeFile.map(lambda x: x.split(','))
 
 start = time.time()

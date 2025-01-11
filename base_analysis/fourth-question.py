@@ -42,32 +42,29 @@ def compute_correlation(rdd):
 sc = SparkContext("local[1]")
 sc.setLogLevel("ERROR")
 
-tasksFile = sc.textFile("./task_events/part-00000-of-00500.csv.gz")
+tasksFile = sc.textFile("../task_events/part-00000-of-00500.csv.gz")
 
 entries = tasksFile.map(lambda x: x.split(','))
 
 event_type = 5
 schedule_class = 7
 start = time.time()
-
 # Map (scheduling_class, (event_type, 1))
 task_per_schedule = entries.map(lambda x: (x[schedule_class], ((x[event_type]), 1)))
 
-# Avoided the join done in fourth-question.py
-# Map each entry to (scheduling_class, (total_count, evicted_count))
-task_counts = task_per_schedule.map(lambda x: (
-    x[0],  # scheduling_class as the key
-    (1, 1 if x[1][0] == '2' else 0)  # (total_count, evicted_count)
-))
+# Totale eventi per scheduling class
+total_per_class = task_per_schedule.mapValues(lambda x: x[1]).reduceByKey(lambda a, b: a + b)
 
-# Reduce by key to sum up total and evicted counts
-combined_counts = task_counts.reduceByKey(lambda a, b: (
-    a[0] + b[0],  # Sum of total counts
-    a[1] + b[1]   # Sum of evicted counts
-))
+# Totale evicted (event_type == '2') per scheduling class
+total_evicted_per_class = task_per_schedule.filter(lambda x: x[1][0] == '2').mapValues(lambda x: x[1]).reduceByKey(lambda a, b: a + b)
+print(f"Total per class: {total_per_class.collect()}")
+print(f"Total evicted per class: {total_evicted_per_class.collect()}")
+
+# combino i totali per scheduling class (schedule,( total_per_class, total_evicted_per_class))
+combined = total_per_class.join(total_evicted_per_class)
 
 # Calculate eviction rate
-eviction_rate_per_class = combined_counts.mapValues(lambda x: x[1] / x[0])
+eviction_rate_per_class = combined.mapValues(lambda x: x[1] / x[0])
 
 print("Execution time: ", time.time() - start )
 

@@ -9,7 +9,7 @@ spark = SparkSession.builder \
     .config("spark.sql.autoBroadcastJoinThreshold", "10MB") \
     .getOrCreate() 
 
-df = spark.read.csv("part-00000-of-00001.csv.gz", header=False, inferSchema=True)
+df = spark.read.csv("../part-00000-of-00001.csv.gz", header=False, inferSchema=True)
 
 cpu_capacity_index = 4
 machine_id_index = 1

@@ -48,11 +48,11 @@ sc.setLogLevel("ERROR")
 
 
 
-tasksEvents = sc.textFile("./task_events/part-00000-of-00500.csv.gz")
+tasksEvents = sc.textFile("../task_events/part-00000-of-00500.csv.gz")
 
 tasksEvents = tasksEvents.map(lambda x: x.split(','))
 
-tasksUsage = sc.textFile("./task_usage/part-00000-of-00500.csv.gz")
+tasksUsage = sc.textFile("../task_usage/part-00000-of-00500.csv.gz")
 
 tasksUsage = tasksUsage.map(lambda x: x.split(','))
 

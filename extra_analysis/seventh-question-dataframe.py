@@ -30,7 +30,7 @@ task_events_schema = StructType([
     StructField("different_machine_constraint", StringType(), True)
 ])
 
-task_events = spark.read.csv("./task_events/part-00000-of-00500.csv.gz", schema=task_events_schema)
+task_events = spark.read.csv("../task_events/part-00000-of-00500.csv.gz", schema=task_events_schema)
 
 # Load task_usage as DataFrame
 task_usage_schema = StructType([
@@ -51,7 +51,7 @@ task_usage_schema = StructType([
     StructField("max_disk_io_time", FloatType(), True)
 ])
 
-task_usage = spark.read.csv("./task_usage/part-00000-of-00500.csv.gz", schema=task_usage_schema)
+task_usage = spark.read.csv("../task_usage/part-00000-of-00500.csv.gz", schema=task_usage_schema)
 
 # Filter evicted tasks
 evicted_tasks = task_events.filter(col("event_type") == 2).select("machine_id", "time")
@@ -69,9 +69,9 @@ joined_data = evicted_tasks.join(
 #correlation_cpu = joined_data.stat.corr("max_cpu_usage", "max_disk_io_time")
 #correlation_disk = joined_data.stat.corr("max_mem_usage", "max_cpu_usage")
 
-print(f"Correlation between memory and disk usage: {correlation_mem}")
-print(f"Correlation between CPU and disk usage: {correlation_cpu}")
-print(f"Correlation between memory and CPU usage: {correlation_disk}")
+print(f"Correlation between memory and disk usage: {correlation_mem}") # type: ignore
+print(f"Correlation between CPU and disk usage: {correlation_cpu}") # type: ignore
+print(f"Correlation between memory and CPU usage: {correlation_disk}") # type: ignore
 
 # Visualization
 start_time = t.time()

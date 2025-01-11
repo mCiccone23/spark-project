@@ -11,7 +11,7 @@ spark = SparkSession.builder \
 spark.sparkContext.setLogLevel("ERROR")
 
 # Caricare i dati come DataFrame
-tasks_df = spark.read.csv("./task_events/part-00000-of-00500.csv.gz", header=False, inferSchema=True)
+tasks_df = spark.read.csv("../task_events/part-00000-of-00500.csv.gz", header=False, inferSchema=True)
 
 # Definire gli indici delle colonne
 scheduling_class_col = 7
