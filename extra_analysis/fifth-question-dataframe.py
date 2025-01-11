@@ -1,63 +1,64 @@
 from pyspark.sql import SparkSession
+from pyspark.sql.functions import col, countDistinct, collect_set
 import matplotlib.pyplot as plt
 import time
-##RIVEDERE RISULTATI DIVERSI
-# Inizializzare la sessione Spark
+
+# Inizializza SparkSession
 spark = SparkSession.builder \
-    .appName("Task Distribution Analysis") \
+    .appName("Task Analysis") \
+    .master("local[1]") \
     .getOrCreate()
 
-# Configurare il livello di log
 spark.sparkContext.setLogLevel("ERROR")
 
-# Caricare i dati come DataFrame
-tasks_df = spark.read.csv("../task_events/part-00000-of-00500.csv.gz", header=False, inferSchema=True)
+# Leggi il file CSV
+tasks_df = spark.read.csv("./task_events/part-00000-of-00500.csv.gz", header=False, inferSchema=True)
 
-# Definire gli indici delle colonne
-scheduling_class_col = 7
-job_id_col = 2
-machine_id_col = 4
+# Indici delle colonne
+scheduling_class = 7
+job_id = 2
+machine_id = 4
 
 start = time.time()
 
-# Filtrare per task schedulati (scheduling_class == 1) e selezionare job_id, machine_id
-job_machine_df = tasks_df.filter(tasks_df[scheduling_class_col] == 1) \
-    .select(tasks_df[job_id_col].alias("job_id"), tasks_df[machine_id_col].alias("machine_id"))
-    
+# Filtra i task con scheduling_class == 1
+filtered_df = tasks_df.filter(col(f"_c{scheduling_class}") == 1)
 
+# Seleziona coppie (job_id, machine_id)
+job_machine_df = filtered_df.select(col(f"_c{job_id}").alias("job_id"), 
+                                    col(f"_c{machine_id}").alias("machine_id"))
 
-# Raggruppare per job_id e contare macchine uniche
-machines_per_job = job_machine_df.distinct().groupBy("job_id") \
-    .agg({"machine_id": "count"}) \
-    .withColumnRenamed("count(machine_id)", "unique_machines")
+# Raggruppa per job_id e conta le macchine distinte
+machines_per_job_df = job_machine_df.groupBy("job_id").agg(countDistinct("machine_id").alias("distinct_machines"))
+machines_per_job_df.cache()
 
-# Contare i job su una sola macchina
-jobs_on_one_machine = machines_per_job.filter(machines_per_job["unique_machines"] == 1).count()
+# Conta i job che girano su una sola macchina
+jobs_on_one_machine = machines_per_job_df.filter(col("distinct_machines") == 1).count()
 
-# Contare i job totali
-total_jobs = machines_per_job.count()
-print("1, tot:", jobs_on_one_machine, total_jobs)
-# Calcolare la percentuale
+# Conta il numero totale di job
+total_jobs = machines_per_job_df.count()
+
+# Calcola la percentuale
 percentage_same_machine = (jobs_on_one_machine / total_jobs) * 100
-
 print(f"Jobs on one machine: {jobs_on_one_machine}, Total jobs: {total_jobs}")
 print(f"Percentage of jobs running on the same machine: {percentage_same_machine:.2f}%")
 
-# Visualizzare un campione della distribuzione
-sample = machines_per_job.limit(100).toPandas()
-jobs = sample["job_id"]
-machines = sample["unique_machines"]
+# Campiona i dati per visualizzazione
+sample = machines_per_job_df.limit(100).collect()
+jobs = [row["job_id"] for row in sample]
+machines = [row["distinct_machines"] for row in sample]
 
 end = time.time() - start
 print("Execution time:", end)
 
-# Grafico
+# Visualizza la distribuzione
 plt.scatter(jobs, machines, color='red')
 plt.xlabel("Job ID")
 plt.ylabel("Number of Machines")
 plt.title("Sample of Task Distribution by Machine")
 plt.show()
 
+input("Press Enter to exit")
 
-# Chiudere la sessione Spark
+# Chiudi la sessione Spark
 spark.stop()

@@ -12,7 +12,7 @@ import time
 sc = SparkContext("local[1]")
 sc.setLogLevel("ERROR")
 
-tasksFile = sc.textFile("../task_events/part-00000-of-00500.csv.gz")
+tasksFile = sc.textFile("./task_events/part-00000-of-00500.csv.gz")
 
 entries = tasksFile.map(lambda x: x.split(','))
 

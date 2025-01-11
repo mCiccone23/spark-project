@@ -7,10 +7,10 @@ sc.setLogLevel("ERROR")
 
 start_time = time.time()
 
-jobsFile = sc.textFile("../job_events/part-00000-of-00500.csv.gz")
+jobsFile = sc.textFile("./job_events/part-00000-of-00500.csv.gz")
 jobsEntries = jobsFile.map(lambda x: x.split(','))
 
-tasksFile = sc.textFile("../task_events/part-00000-of-00500.csv.gz")
+tasksFile = sc.textFile("./task_events/part-00000-of-00500.csv.gz")
 tasksEntries = tasksFile.map(lambda x: x.split(','))
 
 # we count the number of jobs per schedule_class
