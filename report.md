@@ -173,47 +173,32 @@ From the scatter plots and the correlation values, we observe a moderate positiv
 
 #### 1.7 Can we observe correlations between peaks of high resource consumption on some machines and task eviction events?
 This question focuses on two datasets : `task_events`and `task_usage` on this relevant fields:
-  - From task_events: event_type (to filter evictions), machine_id, and time.
-  - From task_usage: machine_id, start_time, end_time, and resource metrics (max_mem, max_cpu, max_disc).
+  - From task_events: task_index, job_id, machine_id and event_type.
+  - From task_usage: task_index, job_id, machine_id, and resource metrics (max_mem, max_cpu).
 ### Methodology
 1. **Data Loading:**
   - Read the `task_event` and  `task_usage` files.
 2. **Mapping, Transformation and Aggregation:**
-  - *Task Event*: Filtered `task_events` to include only tasks evicted. Then mapped the filtered data to create an RDD of `(machine_id, time)` pairs.
+  - *Task Event*: Mapped the data to create an RDD of `((job-ID+task_index,machine_id), (event_type))` pairs.
 
-  - *Resource Usage*: Mapped `task_usage` into an RDD of `(machine_id, (start_time, end_time, (max_mem, max_cpu, max_disc)))`, where each record represents the time window and peak resource usage for a task on a machine.
+  - *Resource Usage*: Mapped `task_usage` into an RDD of `((job-ID+task_index,machine_id), (max_mem, max_cpu))`.
 
-  - Joined the eviction RDD and the resource usage RDD using `machine_id`.
+  - Aggregated values in `tasksUsage` to obtain the maximum values for memory and CPU usage, so we can obtain the peaks for the consumption of these resources.
 
-  - Filtered the joined data to retain only records where the eviction time is between the resource usage time window `(start_time ≤ time ≤ end_time)`.
-
-  - Extracted resource usage values `(memory, CPU, and disk)` at the time of eviction and mapped them for aggregation.
-  - Created separate RDDs for memory, CPU, and disk usage, aggregating the number of evictions for each unique resource usage level.
+  - Joined the two RDD to obtain one RDD with: `((job-ID+task_index,machine_id), ((max_mem, max_cpu), event_type)`.
 3. **Analysis:**
-  - Computed the correlation between resource usage peaks and the number of evictions for each resource type 
-  - Created plots for memory, CPU, and disk usage, showing the number of evictions corresponding to different levels of resource usage peaks.
+  - Prepared data for visualization, extracting only eviction rows.
+  - Created plot with memory and CPU usage showing the distribution of evictions corresponding to different levels of resource usage peaks.
 
 ### Result 
 
-#### Correlation between resources and eviction events
 
-| Resource                | Value                |
-|-----------------------|----------------------|
-| **Max memory**   | -0.011891225790017083 |
-| **Max CPU**| -0.044924205842651846 |
-| **Max Disk**| -0.07870760036834348  |
+#### Plot
+- Correlation betwen resource consumption and eviction events
+![plot correlation](images/resourcePeaksTaskEviction.png)
 
-These low and slightly negative correlation values indicate that there is no significant relationship between resource consumption peaks and task eviction events. In fact, resource usage seems to have minimal or no impact on the likelihood of evictions.
-
-#### Graphs
-  - **Correlation between Memory Peaks and Evictions**
-  ![Memory Peaks and Evictions](./images/correlation_Memory_eviction.png)
-  - **Correlation between CPU Peaks and Evictions**
-  ![CPU Peaks and Evictions](./images/correlation_CPU_eviction.png)
-  - **Correlation between Disk Peaks and Evictions**
-  ![Disk Peaks and Evictions](images/correlation_disk_eviction.png)
-
-The analysis finds no substantial evidence linking peaks in resource usage to task evictions, suggesting other factors play a more critical role in determining eviction events in this distributed system.
+The analysis finds no substantial evidence linking peaks in resource usage to task evictions, suggesting other factors play a more critical role in determining eviction events.There are outliers scattered across the graph, particularly for Max Memory values ranging up to 0.16 and Max CPU values close to 1.0.
+These outliers suggest that some tasks consume significantly higher resources, potentially representing unusual or high-load scenarios.
 
 # 2. Performance Evaluation and improvements
 
@@ -407,7 +392,7 @@ Trying to add caching on the most used RDD `machines_per_jon` the results are sl
 
 #### **RDD Stages**
 
-![RDD Stages](./images/sixth_RDD_stages.png)
+![RDD Stages](./images/sixth-RDD-stages.png)
 
 - **Completed Stages:** 8  
 - **Skipped Stages:** 6  
@@ -433,11 +418,14 @@ In summary, DataFrames are better suited for this type of analysis, offering fas
 
 ### **2.7 Seventh Analysis Evaluation**
 #### Execution Time
-- Execution time without optimization: 32.08906149864197 
+- Execution time with RDD: 23.82987642288208  
+- Execution Time with dataframe: 13.134239435195923 seconds  
 
 #### RDD Stages
-![RDD stages](images/seventh-RDD-stages.png)
+![RDD stages](./images/seventh-rdd-stages.png)
 
+#### Dataframe Stages
+![dataframe stages](./images/seventh-dataframe-stages.png)
 ---
 
 

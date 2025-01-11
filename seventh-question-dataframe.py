@@ -1,109 +1,84 @@
 from pyspark.sql import SparkSession
-from pyspark.sql.functions import col, lit, when, corr, count
 import matplotlib.pyplot as plt
 import time as t
-###RIVEDERE CALCOLO CORRELATION SCORRETTO
+
 # Initialize SparkSession
 spark = SparkSession.builder \
-    .appName("CorrelationResourceUsageEviction") \
+    .appName("Task Usage and Events Analysis") \
     .getOrCreate()
 
-spark.sparkContext.setLogLevel("ERROR")
 
-# Define schema for better performance (optional but recommended)
-from pyspark.sql.types import StructType, StructField, StringType, IntegerType, FloatType
+# Load Data
+tasksEvents = spark.read.csv("./task_events/part-00000-of-00500.csv.gz", header=False, inferSchema=True)
+tasksUsage = spark.read.csv("./task_usage/part-00000-of-00500.csv.gz", header=False, inferSchema=True)
 
-# Load task_events as DataFrame
-task_events_schema = StructType([
-    StructField("time", IntegerType(), True),
-    StructField("missing_info", StringType(), True),
-    StructField("job_id", StringType(), True),
-    StructField("task_index", StringType(), True),
-    StructField("machine_id", StringType(), True),
-    StructField("event_type", IntegerType(), True),
-    StructField("user", StringType(), True),
-    StructField("scheduling_class", IntegerType(), True),
-    StructField("priority", IntegerType(), True),
-    StructField("cpu_request", FloatType(), True),
-    StructField("memory_request", FloatType(), True),
-    StructField("disk_request", FloatType(), True),
-    StructField("different_machine_constraint", StringType(), True)
-])
+# Define column indexes
+col_event_type = 5
+col_machine_id = 4
+col_task_index = 3
+col_job_id = 2
+col_max_mem = 10
+col_max_cpu = 13
 
-task_events = spark.read.csv("./task_events/part-00000-of-00500.csv.gz", schema=task_events_schema)
+# Select and rename columns
+tasksEvents = tasksEvents.select(
+    tasksEvents._c2.alias("job_id"),
+    tasksEvents._c3.alias("task_index"),
+    tasksEvents._c4.alias("machine_id"),
+    tasksEvents._c5.alias("event_type")
+)
 
-# Load task_usage as DataFrame
-task_usage_schema = StructType([
-    StructField("start_time", IntegerType(), True),
-    StructField("end_time", IntegerType(), True),
-    StructField("job_id", StringType(), True),
-    StructField("task_index", StringType(), True),
-    StructField("machine_id", StringType(), True),
-    StructField("mean_cpu_usage", FloatType(), True),
-    StructField("canonical_mem_usage", FloatType(), True),
-    StructField("assigned_mem_usage", FloatType(), True),
-    StructField("unmapped_page_cache", FloatType(), True),
-    StructField("total_page_cache", FloatType(), True),
-    StructField("max_mem_usage", FloatType(), True),
-    StructField("mean_disk_io_time", FloatType(), True),
-    StructField("mean_local_disk_space", FloatType(), True),
-    StructField("max_cpu_usage", FloatType(), True),
-    StructField("max_disk_io_time", FloatType(), True)
-])
+tasksUsage = tasksUsage.select(
+    tasksUsage._c2.alias("job_id"),
+    tasksUsage._c3.alias("task_index"),
+    tasksUsage._c4.alias("machine_id"),
+    tasksUsage._c10.alias("max_mem"),
+    tasksUsage._c13.alias("max_cpu")
+)
 
-task_usage = spark.read.csv("./task_usage/part-00000-of-00500.csv.gz", schema=task_usage_schema)
+# Start timer
+start = t.time()
+# Add unique job_task_id
+tasksEvents = tasksEvents.withColumn("job_task_id", tasksEvents.job_id.cast("string") + tasksEvents.task_index.cast("string"))
+tasksUsage = tasksUsage.withColumn("job_task_id", tasksUsage.job_id.cast("string") + tasksUsage.task_index.cast("string"))
 
-# Filter evicted tasks
-evicted_tasks = task_events.filter(col("event_type") == 2).select("machine_id", "time")
+# Find the peaks of resource usage
+from pyspark.sql import functions as F
 
-# Join task usage with evicted tasks on machine_id
-joined_data = evicted_tasks.join(
-    task_usage,
-    (evicted_tasks.machine_id == task_usage.machine_id) &
-    (evicted_tasks.time >= task_usage.start_time) &
-    (evicted_tasks.time <= task_usage.end_time)
-).select("max_mem_usage", "max_cpu_usage", "max_disk_io_time")
+tasksUsagePeaks = tasksUsage.groupBy("job_task_id", "machine_id") \
+    .agg(
+        F.max("max_mem").alias("peak_max_mem"),
+        F.max("max_cpu").alias("peak_max_cpu")
+    )
 
-# Compute correlations
-#correlation_mem = joined_data.stat.corr("max_mem_usage", "max_disk_io_time")
-#correlation_cpu = joined_data.stat.corr("max_cpu_usage", "max_disk_io_time")
-#correlation_disk = joined_data.stat.corr("max_mem_usage", "max_cpu_usage")
+# Join the datasets
+taskUsageEvents = tasksUsagePeaks.join(
+    tasksEvents,
+    on=["job_task_id", "machine_id"],
+    how="inner"
+)
 
-print(f"Correlation between memory and disk usage: {correlation_mem}")
-print(f"Correlation between CPU and disk usage: {correlation_cpu}")
-print(f"Correlation between memory and CPU usage: {correlation_disk}")
+# Filter for event_type == 2
+evicted_events = taskUsageEvents.filter(taskUsageEvents.event_type == 2)
 
-# Visualization
-start_time = t.time()
-data_mem = joined_data.groupBy("max_mem_usage").agg(count(lit(1)).alias("evictions"))
-data_cpu = joined_data.groupBy("max_cpu_usage").agg(count(lit(1)).alias("evictions"))
-data_disk = joined_data.groupBy("max_disk_io_time").agg(count(lit(1)).alias("evictions"))
+# Collect data for plotting
+data = evicted_events.select("peak_max_mem", "peak_max_cpu").collect()
+filtered_max_mem = [float(row["peak_max_mem"]) for row in data]
+filtered_max_cpu = [float(row["peak_max_cpu"]) for row in data]
 
-# Convert to Pandas for visualization
-df_mem = data_mem.toPandas()
-df_cpu = data_cpu.toPandas()
-df_disk = data_disk.toPandas()
+# End timer and print execution time
+end = t.time()
+print(f"Execution Time: {end - start} seconds")
 
-# Plot Memory
-plt.bar(df_mem["max_mem_usage"], df_mem["evictions"], color='blue')
-plt.xlabel("Max Memory Usage")
-plt.ylabel("Number of Evictions")
-plt.title("Memory Peaks vs Evictions")
+# Plot the data
+plt.figure(figsize=(10, 6))
+plt.scatter(filtered_max_mem, filtered_max_cpu, c='red', alpha=0.6, label='event_type = 2')
+plt.xlabel('Max Memory')
+plt.ylabel('Max CPU')
+plt.title('Scatter Plot of Max Memory and Max CPU (event_type = 2)')
+plt.grid(True)
+plt.legend()
 plt.show()
 
-# Plot CPU
-plt.bar(df_cpu["max_cpu_usage"], df_cpu["evictions"], color='orange')
-plt.xlabel("Max CPU Usage")
-plt.ylabel("Number of Evictions")
-plt.title("CPU Peaks vs Evictions")
-plt.show()
-
-# Plot Disk
-plt.bar(df_disk["max_disk_io_time"], df_disk["evictions"], color='green')
-plt.xlabel("Max Disk Usage")
-plt.ylabel("Number of Evictions")
-plt.title("Disk Peaks vs Evictions")
-plt.show()
-
-end_time = t.time() - start_time
-print(f"Execution time for DataFrame: {end_time}")
+# Stop SparkSession
+spark.stop()
