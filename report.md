@@ -200,6 +200,81 @@ This question focuses on two datasets : `task_events`and `task_usage` on this re
 The analysis finds no substantial evidence linking peaks in resource usage to task evictions, suggesting other factors play a more critical role in determining eviction events.There are outliers scattered across the graph, particularly for Max Memory values ranging up to 0.16 and Max CPU values close to 1.0.
 These outliers suggest that some tasks consume significantly higher resources, potentially representing unusual or high-load scenarios.
 
+---
+
+### 1.8 **Extra Analysis 1** Analysis of Task Priorities: Failure Rate and Distribution
+This analysis focuses on the relationship between task priority and two main aspects:
+
+- `Task Failure Rate`: The percentage of tasks that fail (event_type: FAIL, KILL, EVICT) out of the total tasks for each priority level.
+- `Task Distribution by Priority`: The total number of tasks for each priority level to observe how tasks are distributed across priorities.
+### Methodology
+1. **Data Loading:**
+   - Loaded the `task_events` dataset into a Spark DataFrame.
+
+2. **Filtering and Aggregation:**
+   - Filtered the task events to include only the relevant failure events (FAIL = 3, KILL = 5, EVICT = 2).
+   - Calculated:
+     - Total tasks for each priority level.
+     - Total failures for each priority level.
+   - Combined the data to compute the **failure rate** as:
+     ```math
+     Failure Rate = (Number Of Failures / Total Tasks) × 100 
+     ```
+
+3. **Visualization:**
+   - Prepared the aggregated results for visualization by converting the Spark DataFrame into a Pandas DataFrame.
+   - Created a dual-axis plot to show:
+     - **Failure Rate:** A bar plot showing the percentage of failures for each priority.
+     - **Total Tasks:** A line plot indicating the distribution of total tasks across priorities.
+
+### Results
+
+**Failure Rate and Task Distribution by Priority**
+
+The bar plot represents the failure rate (%) for each task priority, while the line plot represents the total number of tasks for each priority.
+
+![extra1](images/extra1.png)
+
+1. **High Failure Rates:** 
+   - Priority `0` tasks exhibit the highest failure rates, which could indicate insufficient resources or poor management for low-priority tasks.
+2. **High Reliability for High Priorities:** 
+   - Tasks with priority `9` have a large number of tasks and show very low failure rates, suggesting strong reliability and resource allocation.
+3. **Rare Priorities:**
+   - Certain priorities, like `1`, have very few tasks and low failure rates, indicating these may be reserved for specific critical tasks.
+---
+### 1.9 **Extra Analysis 2** Analysis of Machine Performance: Failure Distribution
+This analysis focuses on understanding the distribution of failures (events: FAIL, KILL, EVICT) across machines. It aims to identify the machines with the highest failure counts and analyze potential patterns.
+
+## Methodology
+1. **Data Loading:**
+   - Loaded the `task_events` dataset into a Spark DataFrame.
+
+2. **Filtering and Aggregation:**
+   - Filtered task events to include:
+     - Only failure events (FAIL = 3, KILL = 5, EVICT = 2).
+     - Only rows where `machine_id` is not null.
+   - Counted the number of failure events for each machine.
+
+3. **Sorting and Visualization:**
+   - Sorted the machines by failure count in descending order.
+   - Extracted the top 20 machines with the highest failure counts for visualization.
+   - Created a line plot to show the distribution of failures across the top 20 machines.
+
+## Results
+
+**Top 20 Machines by Failure Count**
+
+The line plot illustrates the failure counts for the top 20 machines with the highest number of failures. This visualization highlights the machines that are potentially problematic and may require further investigation.
+
+1. **High Concentration of Failures:** 
+   - A small subset of machines accounts for a disproportionately high number of failures.
+2. **Potential Hotspots:** 
+   - Machines with consistently high failure counts could indicate hardware issues, mismanagement, or resource contention.
+
+
+![extra2](images/extra2.png)
+---
+
 # 2. Performance Evaluation and improvements
 
 ### 2.1 First analysis evaluation
@@ -419,14 +494,21 @@ In summary, DataFrames are better suited for this type of analysis, offering fas
 ### **2.7 Seventh Analysis Evaluation**
 #### Execution Time
 - Execution time with RDD: 23.82987642288208  
-- Execution Time with dataframe: 13.134239435195923 seconds  
+- Execution Time with dataframe: 13.134239435195923 seconds 
 
+This indicates that operations performed using DataFrames were significantly faster than those using RDDs. 
 #### RDD Stages
 ![RDD stages](images/seventh-rdd-stages.png)
 
+The operations with RDDs resulted in 3 completed stages.
+The execution relies heavily on user-defined logic and lacks the advanced query optimization features present in DataFrames.
 #### Dataframe Stages
 ![dataframe stages](./images/seventh-dataframe-stages.png)
+
+The operations with DataFrames resulted in 7 completed stages, indicating a more granular breakdown of the task execution. While the number of stages increased, the total execution time decreased because Spark optimizes each stage more effectively for DataFrames.
+
 ---
+
 # Implementing a stream processing application
 
 ## Simulate streaming
