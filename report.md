@@ -422,12 +422,27 @@ In summary, DataFrames are better suited for this type of analysis, offering fas
 - Execution Time with dataframe: 13.134239435195923 seconds  
 
 #### RDD Stages
-![RDD stages](./images/seventh-rdd-stages.png)
+![RDD stages](images/seventh-rdd-stages.png)
 
 #### Dataframe Stages
 ![dataframe stages](./images/seventh-dataframe-stages.png)
 ---
+# Implementing a stream processing application
 
+## Simulate streaming
+We developed a Python script to simulate streaming of the `task_events` dataset. The data is ordered by timestamps, and the flow mimics a sequential arrival in real-time by using a socket to send data.
+
+### **Functionality**
+The script performs the following steps:
+1. **Reads the File**: 
+   - Opens the `task_events` dataset, which is compressed in `.gz` format.
+2. **Orders the Data by Timestamp**:
+   - The rows are sorted based on the `timestamp` field (the first column), ensuring chronological order.
+3. **Configures a Socket**:
+   - A socket server is set up to listen on port `9999` and send the data to a connected client.
+4. **Simulates Real-Time Delay**:
+   - Each row is sent sequentially.
+   - The delay between sending rows is calculated based on the difference between their timestamps, simulating real-time behavior.
 
 # Working in the Cloud  
 ## Deploying in the Cloud  
@@ -470,12 +485,171 @@ In summary, DataFrames are better suited for this type of analysis, offering fas
   gcloud storage buckets list  
   ```  
 
+For the clusterData2019 we use the public bucket released by Google: `gs://clusterdata_2019_a/`.
+
 ### 4. Upload script
 To execute the script for the analysis we had to upload it in the bucket:
 ```bash
-gsutil cp example.py gs://spark-project-ciccone/
+gsutil cp instance_usage_analysis.py gs://spark-project-ciccone/
 ```
 
 ### 5. Run script on the Cluster
 
+```bash
+gcloud dataproc jobs submit pyspark gs://spark-project-ciccone/instance_usage_analysis.py \
+    --cluster=spark-cluster \
+    --region=europe-west1
+```
 
+In this example I runned a test that just read the first rows of the csv file `gs://clusterdata_2019_a/instance_usage-000000000000.json.gz` and save it in my bucket  `gs://spark-project-ciccone/test_output/`.
+
+This is the result:
+```bash
+gsutil ls gs://spark-project-ciccone/test_output 
+gs://spark-project-ciccone/test_output/
+gs://spark-project-ciccone/test_output/_SUCCESS
+gs://spark-project-ciccone/test_output/part-00000-6ff60f71-461f-42e3-af3f-580482afe58c-c000.csv
+gs://spark-project-ciccone/test_output/part-00001-6ff60f71-461f-42e3-af3f-580482afe58c-c000.csv
+```
+
+## ClusterData2019 Analysis
+
+First of all we discovered the structure of the files to analyze.
+
+### Instance Usage Table
+| alloc_collection_id | alloc_instance_index | assigned_memory | average_usage                          | collection_id | collection_type | cpu_usage_distribution                                                                                                                                                               | cycles_per_instruction | end_time     | instance_index | machine_id   | maximum_usage                          | memory_accesses_per_instruction | page_cache_memory | random_sample_usage | sample_rate | start_time   | tail_cpu_usage_distribution                                                                                                                                                      |
+|---------------------|----------------------|-----------------|----------------------------------------|---------------|-----------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|-------------------------|--------------|----------------|--------------|---------------------------------------|--------------------------------|------------------|--------------------|-------------|--------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| 330587160469        | 111                 | 0.0             | {0.008392333984375, 0.0094757080078125} | 330587238433  | 0               | [4.711e-4, 6.809e-4, 7.582e-4, 8.316e-4, 9.623e-4, 0.0084, 0.00888, 0.0133, 0.0164, 0.0219, 0.0478]                                                                                 | 0.8992                  | 1838700000000 | 111            | 23624491139 | {0.0479, 0.0194}                      | 0.0015                        | 0.0032          | {0.0166}          | 0.9967      | 1838400000000 | [0.0223, 0.0237, 0.0242, 0.0254, 0.0261, 0.0269, 0.0284, 0.0309, 0.037]                                                                                                             |
+| 330587160469        | 111                 | 0.0             | {0.0271, 0.0276}                        | 330587238433  | 0               | [0.0088, 0.0164, 0.0186, 0.0206, 0.0221, 0.0244, 0.0266, 0.0291, 0.0344, 0.042, 0.0736]                                                                                           | 0.8992                  | 1839300000000 | 111            | 23624491139 | {0.0736, 0.028}                       | 0.0015                        | 0.0018          | {0.0197}          | 1.0         | 1839000000000 | [0.0429, 0.0441, 0.0466, 0.0475, 0.0485, 0.0524, 0.0577, 0.0647, 0.0673]                                                                                                            |
+| 330587160469        | 111                 | 0.0             | {0.0249, 0.0125}                        | 330587238433  | 0               | [5.436e-5, 2.012e-4, 4.139e-4, 0.0086, 0.0093, 0.0253, 0.0356, 0.0428, 0.0477, 0.0511, 0.0645]                                                                                    | 1.0287                  | 942300000000  | 111            | 23624491139 | {0.1177, 0.0193}                      | 0.0034                        | 0.0024          | {0.0086}          | 1.0         | 942000000000  | [0.052, 0.0525, 0.0527, 0.053, 0.0533, 0.0544, 0.055, 0.056, 0.0591]                                                                                                               |
+
+---
+### Instance Event Table
+| alloc_collection_id | alloc_instance_index | collection_id | collection_type | constraint | instance_index | machine_id  | missing_type | priority | resource_request                   | scheduling_class | time         | type |
+|---------------------|----------------------|---------------|-----------------|------------|----------------|-------------|--------------|----------|-------------------------------------|------------------|--------------|------|
+| 0                   | -1                  | 394850707867  | 0               | []         | 249            | 92097052846 | 1            | 114      | {0.02862548828125, 0.0113525390625} | 0                | 1992813863543 | 8    |
+| 0                   | -1                  | 394454896092  | 0               | []         | 964            | 938684710   | 1            | 114      | {0.03265380859375, 0.010528564453125}| 0                | 1977541446075 | 8    |
+
+### Machine Events Table
+| capacity | machine_id  | platform_id                                 | switch_id                                   | time         | type |
+|----------|-------------|---------------------------------------------|---------------------------------------------|--------------|------|
+| null     | 385611578151 | JQ1tVQBMHBAIISU1gUNXk2powhYumYA+4cB3KzU29l8= | +1VWJQsXJiHPTnLfEiJRudzQxErmdD00l4Iwh+Z/MYA= | 1687655299440 | 1    |
+| null     | 375997586330 | JQ1tVQBMHBAIISU1gUNXk2powhYumYA+4cB3KzU29l8= | +MID0TPk5AtCYpEsp9KxczyeufvrlAO6fiXWiUht754= | 90134737257   | 1    |
+| null     | 375997549382 | JQ1tVQBMHBAIISU1gUNXk2powhYumYA+4cB3KzU29l8= | +MID0TPk5AtCYpEsp9KxczyeufvrlAO6fiXWiUht754= | 90077226715   | 1    |
+
+---
+
+### Machine Attributes Table
+| deleted | machine_id  | name                                        | time         | value |
+|---------|-------------|---------------------------------------------|--------------|-------|
+| true    | 21210060    | 1UIj3ffhIWncZ1cXFJKt332Tx9w9O4hPajzZkapbc6I= | 2223892268687 | null  |
+| true    | 21799165    | 1UIj3ffhIWncZ1cXFJKt332Tx9w9O4hPajzZkapbc6I= | 2653423240621 | null  |
+| true    | 1638743919  | 1UIj3ffhIWncZ1cXFJKt332Tx9w9O4hPajzZkapbc6I= | 2539365067032 | null  |
+
+### Collection Event Table
+| alloc_collection_id | collection_id | collection_logical_name                 | collection_name                          | collection_type | max_per_machine | max_per_switch | missing_type | parent_collection_id | priority | scheduler | scheduling_class | start_after_collection_ids | time         | type | user                                        | vertical_scaling |
+|---------------------|---------------|------------------------------------------|------------------------------------------|-----------------|-----------------|----------------|--------------|------------------------|----------|-----------|------------------|----------------------------|--------------|------|--------------------------------------------|-----------------|
+| null                | 396233419682 | KJ8MV0Juy9uRXkIXxeA23iH+VVSuQ9++X+zRcNfUsEg= | uPV3/TgB5WMfJTzMEzf3tJaHuDqfgiSXFbBVl2UYWb8= | 0               | null            | null           | null         | null                   | 103      | 1         | 1                | []                         | 2181847986340 | 5    | /o4X3IunK+hhQOPr+NRkjWgxjdJlGtk9ujTmgsSlZKc= | 2               |
+| null                | 385607584057 | bA/e9j8XWFimoE+RPjLjIgNOKj0m24eFDSE8fjQL6Ho= | os7lm8wNvvr9P9qkeuA8zQY5bosEiARvh1UbtivIYG8= | 0               | null            | null           | null         | null                   | 0        | 0         | 3                | []                         | 1685777786697 | 5    | RafrUOPLtxAkG9IUoVaF8YjjXcVPt1EnEP6Zn+cQ/ko= | 1               |
+| null                | 374545742577 | mg4mwEDKc+7KvBT0lgyKDKjS8u4O75FVf32/ETjywp8= | hiKHkc1co2UVp0OV41U2Tz3UsJIzV/ZlLBE5k/abQ4k= | 0               | null            | null           | null         | null                   | 115      | 1         | 2                | []                         | 65326129736   | 5    | 12boQYioSPNeQSIhS/xwdE0K9pZ8Dqtfyr5X2MtxmZQ= | 1               |
+
+
+### CPU/MEM : average and peak
+
+The script calculates the average (avg_cpu, avg_memory) and peak (peak_cpu, peak_memory) utilization for CPU and memory by grouping data by collection_id.
+
+#### Plots
+The plots shows the result of the analysis
+![cpu utilization plot](./clusterData2019/cpu_utilization_plot.png)
+![memory utilization plot](./clusterData2019/memory_utilization_plot.png)
+
+![dashboard1](./clusterData2019/dashboard_job1_1.png)
+![dashboard2](./clusterData2019/dashboard_job1_2.png)
+
+ 
+## Resource Utilization Analysis Report
+
+### Objective
+Analyze CPU and Memory utilization across jobs, focusing on:
+- Average and peak CPU usage.
+- Average and peak memory usage.
+---
+
+### Key Observations
+#### 1. **CPU Utilization**:
+- **Average CPU Usage**:
+  - Most jobs have low average CPU usage (<0.1 GCU).
+- **Peak CPU Usage**:
+  - A few jobs exhibit high peak usage (>0.6 GCU), suggesting resource-intensive jobs.
+
+#### 2. **Memory Utilization**:
+- **Average Memory Usage**:
+  - Jobs mostly consume low average memory (<0.05 GB).
+- **Peak Memory Usage**:
+  - Some jobs exceed a peak memory usage of 0.3 GB.
+
+#### 3. **Job Execution Metrics**:
+- **YARN Memory Allocation**:
+  - Consistent memory allocation across jobs, with peaks corresponding to job submissions.
+- **CPU Utilization**:
+  - Peaks of up to 15% during heavy job execution phases.
+- **Network and Disk I/O**:
+  - Clear spikes in network and disk activities during job execution, indicating data-intensive operations.
+
+---
+
+### Output Paths
+#### 1. **Resource Utilization Metrics** (CSV Files)
+Saved in `gs://spark-project-ciccone/cpu_memory_analysis_output/`:
+- `_SUCCESS` (completion marker)
+- `part-00000-e801254b-185c-4088-8f1f-a055bd9f4404-c000.csv`
+- `part-00001-e801254b-185c-4088-8f1f-a055bd9f4404-c000.csv`
+- `part-00002-e801254b-185c-4088-8f1f-a055bd9f4404-c000.csv`
+- `part-00003-e801254b-185c-4088-8f1f-a055bd9f4404-c000.csv`
+- `part-00004-e801254b-185c-4088-8f1f-a055bd9f4404-c000.csv`
+
+#### 2. **Plots**
+Saved in `gs://spark-project-ciccone/cpu_memory_analysis/`:
+- `cpu_memory_analysis_plot.png`
+- `cpu_utilization_plot.png`
+- `memory_utilization_plot.png`
+
+---
+
+### Resource Utilization Plots
+#### CPU Utilization - Average vs. Peak
+![CPU Utilization](./clusterData2019/cpu_utilization_plot.png)
+
+#### Memory Utilization - Average vs. Peak
+![Memory Utilization](./clusterData2019/memory_utilization_plot.png)
+
+### Google Cloud Platform Job Execution Metrics
+#### Dashboard 1: YARN Resource Allocation
+![YARN Dashboard 1](./clusterData2019/dashboard_job1_1.png)
+
+#### Dashboard 2: Job Metrics
+![Job Metrics Dashboard](./clusterData2019/dashboard_job1_2.png)
+
+---
+
+## Evaluation of Time-to-Failure Histogram
+
+![Time-to-Failure Histogram](./clusterData2019/machine_failure_analysis_plots/time_to_failure_histogram.png)
+
+### Key Observations:
+1. **High Initial Frequency**:
+   - A significant number of failures occur within a very short interval, indicating that machines fail shortly after recovery or initialization.
+
+2. **Distribution Tail**:
+   - The tail shows a gradual decline in the frequency of time-to-failure intervals, suggesting that fewer machines experience prolonged operational periods without failure.
+
+3. **Clusters Around Specific Durations**:
+   - Distinct peaks suggest patterns or cycles in machine failures, potentially tied to workloads, scheduled maintenance, or recurring hardware issues.
+
+### Output Paths
+
+Saved in `gsutil ls gs://spark-project-ciccone/machine_failure_analysis_plots/`
+- `failure_counts_plot.png`
+- `failure_rate_plot.png`
+- `failure_trends_plot.png`
+- `time_to_failure_histogram.png`
