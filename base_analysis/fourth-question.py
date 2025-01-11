@@ -12,19 +12,19 @@ import time
 def compute_correlation(rdd):
     # Map to compute partial sums for all required statistics
     stats = rdd.map(lambda pair: (
-        1,                 # Count
-        pair[0],           # Sum of x
-        pair[1],           # Sum of y
-        pair[0] * pair[1], # Sum of x * y
-        pair[0] ** 2,      # Sum of x^2
-        pair[1] ** 2       # Sum of y^2
+        1,                 
+        pair[0],           
+        pair[1],          
+        pair[0] * pair[1], 
+        pair[0] ** 2,      
+        pair[1] ** 2       
     )).reduce(lambda a, b: (
-        a[0] + b[0],  # Total count
-        a[1] + b[1],  # Total sum_x
-        a[2] + b[2],  # Total sum_y
-        a[3] + b[3],  # Total sum_xy
-        a[4] + b[4],  # Total sum_x2
-        a[5] + b[5]   # Total sum_y2
+        a[0] + b[0],  
+        a[1] + b[1],  
+        a[2] + b[2], 
+        a[3] + b[3], 
+        a[4] + b[4],  
+        a[5] + b[5]   
     ))
 
     n, sum_x, sum_y, sum_xy, sum_x2, sum_y2 = stats
@@ -52,15 +52,15 @@ start = time.time()
 # Map (scheduling_class, (event_type, 1))
 task_per_schedule = entries.map(lambda x: (x[schedule_class], ((x[event_type]), 1)))
 
-# Totale eventi per scheduling class
+# Totale event per scheduling class
 total_per_class = task_per_schedule.mapValues(lambda x: x[1]).reduceByKey(lambda a, b: a + b)
 
-# Totale evicted (event_type == '2') per scheduling class
+# Total evicted (event_type == '2') per scheduling class
 total_evicted_per_class = task_per_schedule.filter(lambda x: x[1][0] == '2').mapValues(lambda x: x[1]).reduceByKey(lambda a, b: a + b)
 print(f"Total per class: {total_per_class.collect()}")
 print(f"Total evicted per class: {total_evicted_per_class.collect()}")
 
-# combino i totali per scheduling class (schedule,( total_per_class, total_evicted_per_class))
+# combine totals per scheduling class (schedule,( total_per_class, total_evicted_per_class))
 combined = total_per_class.join(total_evicted_per_class)
 
 # Calculate eviction rate
@@ -76,7 +76,7 @@ for schedule_class, rate in results:
 scheduling_classes = [schedule_class for schedule_class, _ in results]
 eviction_rates = [rate for _, rate in results]
 
-#grafico per mostrare il confronto tra i tassi di eviction
+#plot to show eviction rate per scheduling class
 plt.figure(figsize=(10, 6))
 plt.bar(scheduling_classes, eviction_rates, color='skyblue')
 plt.xlabel('Scheduling Class')

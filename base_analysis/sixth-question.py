@@ -7,19 +7,19 @@ import time
 def compute_correlation(rdd):
     # Map to compute partial sums for all required statistics
     stats = rdd.map(lambda pair: (
-        1,                 # Count
-        pair[0],           # Sum of x
-        pair[1],           # Sum of y
-        pair[0] * pair[1], # Sum of x * y
-        pair[0] ** 2,      # Sum of x^2
-        pair[1] ** 2       # Sum of y^2
+        1,                 
+        pair[0],          
+        pair[1],           
+        pair[0] * pair[1], 
+        pair[0] ** 2,      
+        pair[1] ** 2       
     )).reduce(lambda a, b: (
-        a[0] + b[0],  # Total count
-        a[1] + b[1],  # Total sum_x
-        a[2] + b[2],  # Total sum_y
-        a[3] + b[3],  # Total sum_xy
-        a[4] + b[4],  # Total sum_x2
-        a[5] + b[5]   # Total sum_y2
+        a[0] + b[0], 
+        a[1] + b[1],  
+        a[2] + b[2],  
+        a[3] + b[3],  
+        a[4] + b[4],
+        a[5] + b[5]   
     ))
 
     n, sum_x, sum_y, sum_xy, sum_x2, sum_y2 = stats

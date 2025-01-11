@@ -12,19 +12,19 @@ import time
 def compute_correlation(rdd):
     # Map to compute partial sums for all required statistics
     stats = rdd.map(lambda pair: (
-        1,                 # Count
-        pair[0],           # Sum of x
-        pair[1],           # Sum of y
-        pair[0] * pair[1], # Sum of x * y
-        pair[0] ** 2,      # Sum of x^2
-        pair[1] ** 2       # Sum of y^2
+        1,                 
+        pair[0],          
+        pair[1],           
+        pair[0] * pair[1], 
+        pair[0] ** 2,      
+        pair[1] ** 2       
     )).reduce(lambda a, b: (
-        a[0] + b[0],  # Total count
-        a[1] + b[1],  # Total sum_x
-        a[2] + b[2],  # Total sum_y
-        a[3] + b[3],  # Total sum_xy
-        a[4] + b[4],  # Total sum_x2
-        a[5] + b[5]   # Total sum_y2
+        a[0] + b[0],  
+        a[1] + b[1],  
+        a[2] + b[2],  
+        a[3] + b[3],  
+        a[4] + b[4],  
+        a[5] + b[5]  
     ))
 
     n, sum_x, sum_y, sum_xy, sum_x2, sum_y2 = stats
@@ -46,6 +46,7 @@ tasksFile = sc.textFile("../task_events/part-00000-of-00500.csv.gz")
 
 entries = tasksFile.map(lambda x: x.split(','))
 
+# Define columns of interest
 event_type = 5
 schedule_class = 7
 start = time.time()
@@ -79,7 +80,7 @@ for schedule_class, rate in results:
 scheduling_classes = [schedule_class for schedule_class, _ in results]
 eviction_rates = [rate for _, rate in results]
 
-#grafico per mostrare il confronto tra i tassi di eviction
+# Plot eviction rates by scheduling class
 plt.figure(figsize=(10, 6))
 plt.bar(scheduling_classes, eviction_rates, color='skyblue')
 plt.xlabel('Scheduling Class')
@@ -89,6 +90,7 @@ plt.xticks(rotation=45)
 plt.tight_layout()  
 plt.show()
 
+# Correlation between event_type and schedule_class
 schedule_class = 7
 data_for_correlation = entries.map(lambda x: (float(x[event_type]), float(x[schedule_class])))
 correlation = compute_correlation(data_for_correlation)
