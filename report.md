@@ -554,19 +554,6 @@ First of all we discovered the structure of the files to analyze.
 | null                | 374545742577 | mg4mwEDKc+7KvBT0lgyKDKjS8u4O75FVf32/ETjywp8= | hiKHkc1co2UVp0OV41U2Tz3UsJIzV/ZlLBE5k/abQ4k= | 0               | null            | null           | null         | null                   | 115      | 1         | 2                | []                         | 65326129736   | 5    | 12boQYioSPNeQSIhS/xwdE0K9pZ8Dqtfyr5X2MtxmZQ= | 1               |
 
 
-### CPU/MEM : average and peak
-
-The script calculates the average (avg_cpu, avg_memory) and peak (peak_cpu, peak_memory) utilization for CPU and memory by grouping data by collection_id.
-
-#### Plots
-The plots shows the result of the analysis
-![cpu utilization plot](./clusterData2019/cpu_utilization_plot.png)
-![memory utilization plot](./clusterData2019/memory_utilization_plot.png)
-
-![dashboard1](./clusterData2019/dashboard_job1_1.png)
-![dashboard2](./clusterData2019/dashboard_job1_2.png)
-
- 
 ## Resource Utilization Analysis Report
 
 ### Objective
