@@ -498,7 +498,7 @@ In summary, DataFrames are better suited for this type of analysis, offering fas
 
 This indicates that operations performed using DataFrames were significantly faster than those using RDDs. 
 #### RDD Stages
-![RDD stages](images/seventh-rdd-stages.png)
+![RDD stages](./images/seventh-rdd-stages.png)
 
 The operations with RDDs resulted in 3 completed stages.
 The execution relies heavily on user-defined logic and lacks the advanced query optimization features present in DataFrames.
@@ -722,3 +722,53 @@ Saved in `gsutil ls gs://spark-project-ciccone/machine_failure_analysis_plots/`
 - `failure_rate_plot.png`
 - `failure_trends_plot.png`
 - `time_to_failure_histogram.png`
+ 
+---
+
+# Study of related publications
+## Borg: the Next Generation
+The "Borg: The Next Generation" paper provides a comparison of Google's `2011` and `2019` cluster traces, analyzing a trace from `eight Borg clusters` for May 2019, comparing it to Google's 2011 trace. \
+The focus of the paper is about evolution in Borg, such as new features, changes in workloads or higher job arrival rates.  \
+### 1. What is Borg? 
+`Borg` is a cluster management system with a `centralized scheduler` that allocates tasks (individual replicas of jobs) to machines in a cluster (cell). Each task requests resources such as CPU and memory, and jobs are prioritized based on their importance. Borg also supports resource overcommitment and vertical scaling, dynamically adjusting resource limits for tasks.
+### 2. Difference from 2011 and 2019 Traces
+
+We said that the first is difference between the traces it's about the number of clusters: eight in the 2019, and only one in 2011. Then, these are the most important changes: 
+
+![comparison](./images/borg-comparison.png)
+
+### 3. Resource Utilization
+`Resource utilization` increased from 2011 to 2019 due to a shift toward the best-effort batch tier, which now consumes more CPU and memory. The use of statistical multiplexing to overcommit resources has grown, particularly for memory. Borg has maintained a balance by improving `scheduling efficiency` and `reducing resource slack`.
+
+### 4. Machine Utilization:
+
+`Machines` are used more consistently in 2019 compared to 2011, with fewer under- or over-utilized machines, because the scheduler is doing a better job in 2019 than it did in 2011 in terms of distributing workload across the cell and the machines. Despite improvements, utilization remains below full capacity due to factors like disaster recovery protocols and machine constraints.
+
+### 5. New Borg Features and Trace Properties:
+
+-  `Alloc Sets`: Reserved machine resources for jobs, alloc information was not included in the 2011's trace, but is included in the 2019
+one.
+
+- `Job Dependencies`: Allowing automatic cleanup of child jobs when parent jobs terminate, permitting
+more sophisticated failure analyses.
+
+- `Batch Queuing`: Scheduling batch jobs for higher throughput is being added and it manages the aggregate batch job workload.
+
+- `Vertical Scaling`: Automated resource limits adjustments during task execution, reducing slack and improving efficiency.This is done using a system called Autopilot. The trace indicates which jobs were subject to
+this autoscaling.
+
+### 6. Evolution in the Scheduling Load:
+
+`Job submission rates` grew 3.7× from 2011 to 2019, while the task submission rate rose 7×. Despite this, the Borg scheduler handles the increased load with reduced median scheduling delays. Production-tier jobs are prioritized, and new features like batch scheduling help manage the workload.
+
+### 7. Resource Consumption:
+`Resource consumption` follows a heavy-tailed distribution, with the top 1% of jobs (resource "hogs") consuming over 99% of resources. These large jobs create challenges for scheduling, requiring isolation strategies to protect smaller jobs (the "mice") from queueing delays.
+
+#### Comparison with 2011 Data:
+
+Both 2011 and 2019 data exhibit heavy-tailed distributions, but the 2019 workload is more extreme. The squared coefficient of variation (C²) for resource usage increased significantly, emphasizing the growing disparity between small and large jobs.
+
+### 8. Conclusions:
+
+The paper focuses on how the 2019 trace captures significant advancements in Borg's capabilities. While resource utilization and workload complexity have increased, Borg's scheduler has become more efficient. 
+
