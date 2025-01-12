@@ -80,5 +80,7 @@ plt.grid(True)
 plt.legend()
 plt.show()
 
+
+input("Press Enter to exit")
 # Stop SparkSession
 spark.stop()
