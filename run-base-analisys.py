@@ -9,6 +9,8 @@ scripts = [
     "fifth-question.py",
     "sixth-question.py",
     "seventh-question.py",
+    "extra-analysis-1.py",
+    "extra-analysis-2.py",
 ]
 
 # Directory
