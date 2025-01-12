@@ -112,7 +112,8 @@ This question focuses on the `task events` table, in particular on the **schedul
   ![Eviction Rate by scheduling_class](./images/eviction_rate_by_scheduling_class.png)  
   *The most evicted tasks are that with lower scheduling class: 0 and 1*
 
-Another analysis done is the computation of the correlation between event_type and schedule_class: -0.19884144277296448. 
+Another analysis done is the computation of the correlation between event_type and schedule_class: `-0.19884144277296448.`
+So we can say that the two fields just show a slightly negative correlation that means that they don't impact a lot each others.
 
 ---
 ### 1.5 In general, do tasks from the same job run on the same machine?
@@ -438,6 +439,7 @@ eviction_rate_per_class = combined_counts.mapValues(lambda x: x[1] / x[0])
 
 - **Execution time with RDD:**  5.834218978881836 s 
 - **Execution time with dataframe:**  4.376155138015747 s
+
 It is evident that using dataframe the performance are better than using RDD.
 
 #### RDD Stages
@@ -445,17 +447,39 @@ It is evident that using dataframe the performance are better than using RDD.
 #### Dataframe Stages
 ![dataframe stages](images/fourth-dataframe-stages.png)
 
+- RDD Stages: Only `2 stages` are completed.
+The stages include transformations like collecting and indexing data.
+Shuffle operations are observed, which contribute to additional overhead in execution time.
+
+- DataFrame Stages: `6 stages` are completed, reflecting the more granular task breakdown handled by the Catalyst Optimizer.
+Although there are more stages, the optimized execution plan reduces shuffle overhead and improves overall efficiency.
+The shuffle read/write data sizes are slightly higher but are handled more effectively within the optimized framework.
+
 ---
 ### **2.5 Fifth Analysis Evaluation**
 #### Studies at the application level:
 Trying to add caching on the most used RDD `machines_per_jon` the results are slightly better, but still is not possible to see a big improvement, because the RDD is used few times. After the analysis with caching these are the results obtained on the execution time:
 - Execution time before optimization: 3.0019748210906982 s
 - Execution time with caching: 2.735642671585083 s
-
+- Execution time with dataframe: 10.118622541427612
 ### RDD vs Dataframe
 #### RDD Stages
 ![RDD stages](images/fifth-RDD-stages.png)
+- Completed Stages: 4
+- Skipped Stages: 2 \
+The operations involve grouping and collecting data, but the limited optimization mechanisms of RDDs result in fewer stages overall, with noticeable shuffle operations and higher resource usage.
+- Shuffle Read/Write:
+Significant shuffle read and write sizes, indicating more intensive data movement between nodes, which adds latency and resource overhead.
+
 #### Dataframe Stages
+![dataframe stages](images/fifth-dataframe-stages.png)
+
+- Completed Stages: 12
+- Skipped Stages: 19 \
+The breakdown of tasks into more granular stages demonstrates the optimization capabilities of the Catalyst Optimizer, which handles query planning efficiently.
+- Shuffle Read/Write:
+Shuffle sizes are better managed with reduced overhead, reflecting the impact of DataFrame optimizations such as predicate pushdown and columnar data processing.
+---
 
 ### **2.6 Sixth Analysis Evaluation**
 
@@ -487,8 +511,9 @@ Trying to add caching on the most used RDD `machines_per_jon` the results are sl
   - Most stages executed in milliseconds (e.g., 0.01–0.1 seconds).
 - **Shuffle Read/Write:**  
   - Shuffle Read and Write values are minimal (e.g., `248.0 B`).
-#### **Conclusion**
+
 In summary, DataFrames are better suited for this type of analysis, offering faster execution and more efficient handling of resource allocation data.
+
 ---
 
 ### **2.7 Seventh Analysis Evaluation**
