@@ -242,38 +242,42 @@ The bar plot represents the failure rate (%) for each task priority, while the l
 3. **Rare Priorities:**
    - Certain priorities, like `1`, have very few tasks and low failure rates, indicating these may be reserved for specific critical tasks.
 ---
-### 1.9 **Extra Analysis 2** Analysis of Machine Performance: Failure Distribution
-This analysis focuses on understanding the distribution of failures (events: FAIL, KILL, EVICT) across machines. It aims to identify the machines with the highest failure counts and analyze potential patterns.
+### 1.9 Analysis Report: Distribution of CPU and Memory Requests
 
-## Methodology
-1. **Data Loading:**
-   - Loaded the `task_events` dataset into a Spark DataFrame.
+The dataset was analyzed to understand the distribution of CPU and memory requests by tasks in the Google Cluster trace. This analysis aims to uncover patterns and insights into resource allocation, task behavior, and the overall usage of computational resources in the cluster.
 
-2. **Filtering and Aggregation:**
-   - Filtered task events to include:
-     - Only failure events (FAIL = 3, KILL = 5, EVICT = 2).
-     - Only rows where `machine_id` is not null.
-   - Counted the number of failure events for each machine.
+**Steps**:
+   - **Aggregation**: Tasks were grouped by their requested CPU and memory values, and the total count of tasks for each unique resource request was calculated.
+   - **Visualization**: Bar charts were plotted to illustrate the frequency distribution of CPU and memory requests.
 
-3. **Sorting and Visualization:**
-   - Sorted the machines by failure count in descending order.
-   - Extracted the top 20 machines with the highest failure counts for visualization.
-   - Created a line plot to show the distribution of failures across the top 20 machines.
+### Results
 
-## Results
+#### CPU Request Distribution
 
-**Top 20 Machines by Failure Count**
+![Cpu requests](./images/CPU_distribution.png)
+- **Observations**:
+  - The majority of tasks requested minimal CPU resources, concentrated around the lower range (0.0 to 0.1 normalized units).
+  - Peaks in the distribution are observed near specific small values, likely reflecting common task types or configurations.
+  - Very few tasks requested more than 0.2 CPU units, indicating that high CPU-intensive tasks are rare in the cluster.
 
-The line plot illustrates the failure counts for the top 20 machines with the highest number of failures. This visualization highlights the machines that are potentially problematic and may require further investigation.
+- **Insights**:
+  - The cluster appears to serve a large number of lightweight tasks with minimal CPU requirements.
+  - Optimizing for these low-CPU tasks might enhance overall scheduling efficiency and resource utilization.
 
-1. **High Concentration of Failures:** 
-   - A small subset of machines accounts for a disproportionately high number of failures.
-2. **Potential Hotspots:** 
-   - Machines with consistently high failure counts could indicate hardware issues, mismanagement, or resource contention.
+#### Memory Request Distribution
+![MEM requests](./images/mem_distribution.png)
+- **Observations**:
+  - Similar to CPU requests, the majority of tasks requested very low memory resources, primarily between 0.0 and 0.1 normalized units.
+  - A sharp drop in frequency is visible for tasks requiring memory beyond 0.2 units.
+  - There are occasional outliers with higher memory requests, but these are relatively rare.
 
+- **Insights**:
+  - The cluster workload is heavily dominated by memory-light tasks, which likely aligns with the lightweight nature of most jobs.
+  - Resource allocation strategies can prioritize small memory allocations to maximize cluster efficiency.
 
-![extra2](images/extra2.png)
----
+### Conclusion
+- Both CPU and memory requests show a highly skewed distribution, with most tasks requiring minimal resources.
+- The results suggest a cluster workload predominantly consisting of lightweight tasks, with a small fraction of high-resource-consuming tasks.
 
 # 2. Performance Evaluation and improvements
 

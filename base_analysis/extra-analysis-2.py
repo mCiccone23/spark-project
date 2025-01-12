@@ -1,75 +1,49 @@
-from pyspark.sql import SparkSession
-from pyspark.sql.functions import col, count, when, lit
+from pyspark import SparkContext
 import matplotlib.pyplot as plt
 
-# Inizializza la SparkSession
-spark = SparkSession.builder \
-    .appName("Machine Performance Analysis") \
-    .getOrCreate()
+# Inizializza il contesto Spark
+sc = SparkContext("local[1]")
+sc.setLogLevel("ERROR")
 
-# Carica i dati del task_events
-task_events = spark.read.csv("./task_events/part-00000-of-00500.csv.gz", header=False, inferSchema=True)
+# Carica i file CSV dei task
+task_events = sc.textFile("./task_events/part-00000-of-00500.csv.gz")
 
-# Assegna nomi ai campi rilevanti
-columns = [
-    "timestamp", "missing_info", "job_id", "task_index", "machine_id",
-    "event_type", "user_name", "scheduling_class", "priority",
-    "cpu_request", "ram_request", "disk_request", "different_machine_constraint"
-]
-task_events = task_events.toDF(*columns)
+# Suddividi le righe in colonne
+task_events_parsed = task_events.map(lambda x: x.split(','))
 
-# Filtra solo gli eventi di interesse (FAIL = 3, KILL = 5, EVICT = 2) e verifica che machine_id non sia nullo
-failures = task_events.filter((col("event_type").isin(3, 5, 2)) & (col("machine_id").isNotNull()))
+# Estrai le risorse richieste (CPU e memoria)
+# Indici: CPU richiesta (10), Memoria richiesta (11)
+cpu_memory_requests = task_events_parsed.map(lambda x: (float(x[9]), float(x[10])) if x[9] != '' and x[10] != '' else None).filter(lambda x: x is not None)
 
-# Definisci le fasce di CPU e RAM
-cpu_bins = [
-    when(col("cpu_request") <= 0.1, lit("0.0-0.1"))
-    .when((col("cpu_request") > 0.1) & (col("cpu_request") <= 0.3), lit("0.1-0.3"))
-    .when((col("cpu_request") > 0.3) & (col("cpu_request") <= 0.5), lit("0.3-0.5"))
-    .when((col("cpu_request") > 0.5) & (col("cpu_request") <= 0.7), lit("0.5-0.7"))
-    .when((col("cpu_request") > 0.7) & (col("cpu_request") <= 1.0), lit("0.7-1.0"))
-    .otherwise(lit("1.0+"))
-]
-ram_bins = [
-    when(col("ram_request") <= 0.1, lit("0.0-0.1"))
-    .when((col("ram_request") > 0.1) & (col("ram_request") <= 0.3), lit("0.1-0.3"))
-    .when((col("ram_request") > 0.3) & (col("ram_request") <= 0.5), lit("0.3-0.5"))
-    .when((col("ram_request") > 0.5) & (col("ram_request") <= 0.7), lit("0.5-0.7"))
-    .when((col("ram_request") > 0.7) & (col("ram_request") <= 1.0), lit("0.7-1.0"))
-    .otherwise(lit("1.0+"))
-]
+# Conta il numero di task per valori unici di CPU e Memoria richiesti
+cpu_distribution = cpu_memory_requests.map(lambda x: (x[0], 1)).reduceByKey(lambda a, b: a + b).collect()
+memory_distribution = cpu_memory_requests.map(lambda x: (x[1], 1)).reduceByKey(lambda a, b: a + b).collect()
 
-# Aggiungi le fasce come nuove colonne
-failures = failures.withColumn("CPU_Bin", cpu_bins[0]) \
-                   .withColumn("RAM_Bin", ram_bins[0])
+# Ordina i dati per creare i grafici
+cpu_distribution = sorted(cpu_distribution, key=lambda x: x[0])
+memory_distribution = sorted(memory_distribution, key=lambda x: x[0])
 
-# Raggruppa per fasce e conta i fallimenti
-failures_by_bins = (
-    failures.groupBy("CPU_Bin", "RAM_Bin")
-    .agg(count("event_type").alias("failure_count"))
-    .orderBy(col("failure_count").desc())
-)
+# Separazione delle chiavi (capacità) e dei valori (conteggi)
+cpu_values, cpu_counts = zip(*cpu_distribution)
+memory_values, memory_counts = zip(*memory_distribution)
 
-# Converti i dati in un DataFrame Pandas
-failures_by_bins_pd = failures_by_bins.toPandas()
-
-# Visualizza i dati con un bar plot
-plt.figure(figsize=(12, 6))
-for ram_bin in failures_by_bins_pd["RAM_Bin"].unique():
-    subset = failures_by_bins_pd[failures_by_bins_pd["RAM_Bin"] == ram_bin]
-    plt.bar(
-        subset["CPU_Bin"],
-        subset["failure_count"],
-        label=f"RAM: {ram_bin}",
-        alpha=0.7
-    )
-
-plt.xlabel("CPU Bin")
-plt.ylabel("Failure Count")
-plt.title("Failures Grouped by CPU and RAM Bins")
-plt.legend(title="RAM Bins")
-plt.tight_layout()
+# Grafico: Distribuzione delle richieste di CPU
+plt.figure(figsize=(10, 5))
+plt.bar(cpu_values, cpu_counts, width=0.02, edgecolor="black")
+plt.xlabel("CPU Requested")
+plt.ylabel("Number of Tasks")
+plt.title("Distribution of CPU Requests")
+plt.grid(True)
 plt.show()
 
-# Salva i risultati su disco (opzionale)
-failures_by_bins_pd.to_csv("failures_by_bins.csv", index=False)
+# Grafico: Distribuzione delle richieste di Memoria
+plt.figure(figsize=(10, 5))
+plt.bar(memory_values, memory_counts, width=0.02, edgecolor="black", color='orange')
+plt.xlabel("Memory Requested")
+plt.ylabel("Number of Tasks")
+plt.title("Distribution of Memory Requests")
+plt.grid(True)
+plt.show()
+
+# Chiudi la sessione Spark
+sc.stop()
