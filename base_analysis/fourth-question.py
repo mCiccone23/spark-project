@@ -95,9 +95,11 @@ print(f"Correlation between event_type and schedule_class: {correlation}")
 
 print("Execution time: ", time.time() - start )
 
+input("Press Enter ")
+
 # Close Spark session
 
 sc.stop()
 
-input("Press Enter ")
+
  

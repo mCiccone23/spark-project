@@ -49,6 +49,7 @@ plt.show()
 # Close Spark session
 
 input("Press Enter ")
+
 sc.stop()
 
 

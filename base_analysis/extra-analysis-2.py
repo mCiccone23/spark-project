@@ -44,5 +44,6 @@ plt.title("Distribution of Memory Requests")
 plt.grid(True)
 plt.show()
 
+input("Press Enter ")
 
 sc.stop()
